@@ -1,0 +1,27 @@
+name: cv-combinators
+version: 0.1
+license: BSD3
+maintainer: Noam Lewis <jones.noamle@gmail.com>
+bug-reports: mailto:jones.noamle@gmail.com
+category: AI, Graphics
+synopsis: Functional Combinators for Computer Vision
+description:
+   Initial version; using HOpenCV as a backend
+build-type: Simple
+cabal-version:  >= 1.2
+
+-- library
+--    exposed-modules:
+--    hs-Source-Dirs: src
+--    build-depends: base >= 3 && < 5
+--    ghc-options: -Wall 
+
+-- executable test-hopencv
+--   hs-source-dirs:  src
+--   Build-Depends: base >= 4
+--   main-is: Test.hs
+--   Ghc-Options: -Wall
+--   Ghc-Prof-Options:  -prof -auto-all 
+--   other-modules: 
+
+
