@@ -1,0 +1,4 @@
+Functional Combinators for Computer Vision
+
+This library is intended to wrap CV primitives in a pure functional API. 
+Currently the idea is to use HOpenCV (OpenCV bindings for Haskell) as the backend.
