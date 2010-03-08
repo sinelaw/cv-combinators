@@ -10,11 +10,11 @@ description:
 build-type: Simple
 cabal-version:  >= 1.2
 
--- library
---    exposed-modules:
---    hs-Source-Dirs: src
---    build-depends: base >= 3 && < 5
---    ghc-options: -Wall 
+library
+   exposed-modules: AI.CV.Processor
+   hs-Source-Dirs: src
+   build-depends: base >= 3 && < 5
+   ghc-options: -Wall 
 
 -- executable test-hopencv
 --   hs-source-dirs:  src
