@@ -29,17 +29,23 @@ empty = processor pf af id' rf
           id' = do return
           rf = const doNothing 
                
-run :: (Monad m) => Processor m a b o -> a -> m b
+run :: (Monad m) => Processor m a b o -> a -> m o
 run = runWith f
-    where f _ = do return
+    where f mo mb = do
+            o <- mo
+            b <- mb
+            return o
 
-runWith :: Monad m => (o -> b -> m o') -> Processor m a b o -> a -> m o'
+runWith :: Monad m => (m o -> m b -> m o') -> Processor m a b o -> a -> m o'
 runWith f (Processor pf af cf rf) a = do
         x <- af a
-        o <- pf a x
-        b <- cf x
-        o' <- f o b
+        o' <- f (pf a x) (cf x)
         rf x
         return o'
 runWith f (Chain p1 p2) a = runWith g p1 a
-    where g  _ b = runWith f p2 b
+    where g mo mb = do
+            b <- mb
+            let g' mo' mc = do
+                  o <- mo
+                  f mo' mc
+            runWith g' p2 b
