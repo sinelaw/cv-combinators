@@ -13,7 +13,7 @@ import Foreign.Ptr
 
 
 -- TODO: Because allocations may fail, we need an IO/MaybeT  thingy here
-camera :: Integral a => a -> Processor IO () (Ptr CxCore.IplImage) ()
+camera :: Integral a => a -> Processor IO () () (Ptr CxCore.IplImage)
 camera index = processor processQueryFrame allocateCamera fromState releaseNext
     where processQueryFrame :: () -> (Ptr CxCore.IplImage, Ptr HighGui.CvCapture) -> IO ()
           processQueryFrame _ (outImage, cap) = do
@@ -36,7 +36,7 @@ camera index = processor processQueryFrame allocateCamera fromState releaseNext
           releaseNext (_, cap) = do
             HighGui.cvReleaseCapture cap
   
-resize :: CxCore.CvSize -> CV.InterpolationMethod -> Processor IO (Ptr IplImage) (Ptr IplImage) ()
+resize :: CxCore.CvSize -> CV.InterpolationMethod -> Processor IO () (Ptr IplImage) (Ptr IplImage)
 resize targetSize interp = processor processResize allocateResize (do return) CxCore.cvReleaseImage
     where processResize :: (Ptr IplImage) -> (Ptr IplImage) -> IO ()
           processResize src dst = CV.cvResize src dst interp

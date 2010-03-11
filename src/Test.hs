@@ -2,14 +2,16 @@ module Main where
 
 
 import Foreign.Ptr
-import AI.CV.ImageProcessors 
+import qualified AI.CV.ImageProcessors  as ImageProcessors
 
 import qualified AI.CV.OpenCV.CxCore as CxCore
 import qualified AI.CV.OpenCV.CV as CV
 import qualified AI.CV.Processor as Processor
 
+import Prelude hiding ((.),id)
+import Control.Category
 
-r1 :: Processor.Processor IO String String ()
+r1 :: Processor.Processor IO () String String
 r1 = Processor.processor pf af cf rf 
     where pf a x = do
             print $ "Processing: " ++ a ++ " with state:"
@@ -24,8 +26,16 @@ r1 = Processor.processor pf af cf rf
             print x
             
 
-test1 :: Processor.Processor IO () (Ptr CxCore.IplImage) ()
-test1 = Processor.Chain (camera (0::Int)) (resize (CxCore.CvSize 160 120) CV.CV_INTER_LINEAR)
+type PIO = Processor.Processor IO () 
+
+camera :: PIO () (Ptr CxCore.IplImage)
+camera = ImageProcessors.camera (0::Int)
+
+resizer :: PIO (Ptr CxCore.IplImage) (Ptr CxCore.IplImage)
+resizer = ImageProcessors.resize (CxCore.CvSize 160 120) CV.CV_INTER_LINEAR
+
+test1 :: PIO () (Ptr CxCore.IplImage)
+test1 = resizer . camera 
 
 main :: IO ()
 main = do
