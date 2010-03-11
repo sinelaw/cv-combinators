@@ -4,6 +4,7 @@ module AI.CV.Processor where
 
 import Prelude hiding ((.),id)
 
+import Data.Default
 import Control.Category
 import Control.Applicative
 import Control.Monad(liftM)
@@ -61,13 +62,14 @@ instance Monad m => Functor (Processor m o a) where
   fmap f (Processor pf af cf rf) = processor pf af cf' rf
     where cf' x = liftM f (cf x) 
 
-instance Monad m => Applicative (Processor m o a) where
+-- We need the Default o constraint for pure, because we have to "invent" a value of type o to return
+-- from the processing function (pf)
+instance (Monad m, Default o) => Applicative (Processor m o a) where
   -- [[ pure ]] = const
   -- pure :: b -> Processor m o a b
   pure b = processor pf af id' rf
-    where pf = const . const $ doNothing
-          af a = do
-            return b
+    where pf = const . const $ do return def
+          af = const $ do return b
           id' = do return
           rf = const doNothing 
             

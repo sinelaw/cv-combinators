@@ -14,7 +14,7 @@ library
    exposed-modules: AI.CV.Processor,
                     AI.CV.ImageProcessors
    hs-Source-Dirs: src
-   build-depends: base >= 3 && < 5, HOpenCV
+   build-depends: base >= 3 && < 5, HOpenCV, data-default
    ghc-options: -Wall 
 
 executable test-cv-combinators
