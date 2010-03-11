@@ -2,3 +2,25 @@ Functional Combinators for Computer Vision
 
 This library is intended to wrap CV primitives in a pure functional API. 
 Currently the idea is to use HOpenCV (OpenCV bindings for Haskell) as the backend.
+
+Bottom Line:
+------------
+
+camera :: PIO () (Ptr CxCore.IplImage)
+
+resizer :: PIO (Ptr CxCore.IplImage) (Ptr CxCore.IplImage)
+
+test1 :: PIO () (Ptr CxCore.IplImage)
+test1 = resizer . camera 
+
+
+TODO:
+-----
+
+* Write "splitter" and "joiner" processor primitives
+
+* Allow viewing the processor graph
+
+* Use MaybeT and processors that output Maybes to implement a "FRP" (?) framework:
+  - continuously re-run the processing loop, which will terminate an iteration whenever one process returns Nothing
+  - somehow run each processor only once, even if graph was split (and even re-joined)
