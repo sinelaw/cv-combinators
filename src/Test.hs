@@ -39,6 +39,6 @@ test1 = resizer . camera
 
 main :: IO ()
 main = do
-  res <- Processor.run (Processor.Chain r1 r1) "input"
+  res <- Processor.run (Processor.chain r1 r1) "input"
   print res
 
