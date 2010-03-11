@@ -24,3 +24,5 @@ TODO:
 * Use MaybeT and processors that output Maybes to implement a "FRP" (?) framework:
   - continuously re-run the processing loop, which will terminate an iteration whenever one process returns Nothing
   - somehow run each processor only once, even if graph was split (and even re-joined)
+
+* Embed image depth/nchannels in the types? If not, we can't assure safety at all when building OpenCV processor chains, because some functions require certain formats (such as cvCanny requiring grayscale)

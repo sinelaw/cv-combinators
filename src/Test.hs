@@ -9,7 +9,6 @@ import qualified AI.CV.OpenCV.CV as CV
 import qualified AI.CV.Processor as Processor
 
 import Prelude hiding ((.),id)
-import Control.Monad(forever)
 import Control.Category
 
 
@@ -22,13 +21,13 @@ resizer = ImageProcessors.resize (CxCore.CvSize 800 600) CV.CV_INTER_LINEAR
 window :: ImageProcessors.ImageSink
 window = ImageProcessors.window (0 :: Int)
 
+canny :: ImageProcessors.ImageProcessor
+canny = ImageProcessors.canny 30 150 3
 
 main :: IO ()
-main = forever $ do
-         Processor.runUntil (window . resizer . camera) () testKey
-             where testKey _ = do
-                     res <- HighGui.waitKey (3::Int) :: IO Int
-                     return (res /= -1)
+main = Processor.runUntil (window . canny . camera) () testKey
+    where testKey _ = do
+            res <- HighGui.waitKey (3::Int) :: IO Int
+            return (res /= -1)
                      
             
-

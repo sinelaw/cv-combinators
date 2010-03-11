@@ -69,4 +69,20 @@ dilate :: Integral a => a -> ImageProcessor
 dilate iterations = imageProcessor procDilate CxCore.cvCloneImage
     where procDilate = CV.cvDilate iterations
 
+
+canny :: Integral a => a -> a -> a -> ImageProcessor
+canny thres1 thres2 size = processor processCanny allocateCanny convertState releaseState
+    where processCanny src (gray, dst) = do
+            HighGui.cvConvertImage src gray 0 
+            CV.cvCanny gray dst thres1 thres2 size
+          allocateCanny src = do
+            target <- CxCore.cvCreateImage (CxCore.cvGetSize src) (1::Int) $ CxCore.IPL_DEPTH_8U
+            gray <- CxCore.cvCreateImage (CxCore.cvGetSize src) (1::Int) $ CxCore.IPL_DEPTH_8U
+            -- todo check for success of allocations
+            return (gray, target)
+          convertState = do return . snd
+          releaseState (gray, target) = do
+            CxCore.cvReleaseImage gray
+            CxCore.cvReleaseImage target
+
 ------------------------------------------------------------------
