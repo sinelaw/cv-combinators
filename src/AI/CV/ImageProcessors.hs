@@ -12,8 +12,12 @@ import Data.Maybe(fromJust)
 import Foreign.Ptr
 
 
+type ImageSink      = Processor IO () (Ptr IplImage) ()
+type ImageSource    = Processor IO () ()             (Ptr IplImage)
+type ImageProcessor = Processor IO () (Ptr IplImage) (Ptr IplImage)
+
 -- TODO: Because allocations may fail, we need an IO/MaybeT  thingy here
-camera :: Integral a => a -> Processor IO () () (Ptr CxCore.IplImage)
+camera :: Integral a => a -> ImageSource
 camera index = processor processQueryFrame allocateCamera fromState releaseNext
     where processQueryFrame :: () -> (Ptr CxCore.IplImage, Ptr HighGui.CvCapture) -> IO ()
           processQueryFrame _ (outImage, cap) = do
@@ -35,17 +39,34 @@ camera index = processor processQueryFrame allocateCamera fromState releaseNext
           
           releaseNext (_, cap) = do
             HighGui.cvReleaseCapture cap
+------------------------------------------------------------------
   
-resize :: CxCore.CvSize -> CV.InterpolationMethod -> Processor IO () (Ptr IplImage) (Ptr IplImage)
-resize targetSize interp = processor processResize allocateResize (do return) CxCore.cvReleaseImage
-    where processResize :: (Ptr IplImage) -> (Ptr IplImage) -> IO ()
-          processResize src dst = CV.cvResize src dst interp
-          allocateResize :: (Ptr IplImage) -> IO (Ptr IplImage)
+
+window :: Int -> ImageSink
+window num = processor procFunc allocFunc (do return) (do return)
+    where procFunc :: (Ptr IplImage -> () -> IO ())
+          procFunc src _ = HighGui.showImage num src
+          
+          allocFunc :: (Ptr IplImage -> IO ())
+          allocFunc _ = HighGui.newWindow num
+
+------------------------------------------------------------------
+
+imageProcessor :: (Ptr IplImage -> Ptr IplImage -> IO ()) -> (Ptr IplImage -> IO (Ptr IplImage)) 
+               -> ImageProcessor
+imageProcessor procFunc allocFunc = processor procFunc allocFunc (do return) CxCore.cvReleaseImage
+
+resize :: CxCore.CvSize -> CV.InterpolationMethod -> ImageProcessor
+resize targetSize interp = imageProcessor processResize allocateResize
+    where processResize src dst = CV.cvResize src dst interp
           allocateResize src = do
             nChans <- CxCore.getNumChannels src :: IO Int
             depth <- CxCore.getDepth src
             CxCore.cvCreateImage targetSize nChans depth
           
 
+dilate :: Integral a => a -> ImageProcessor
+dilate iterations = imageProcessor procDilate CxCore.cvCloneImage
+    where procDilate = CV.cvDilate iterations
 
-
+------------------------------------------------------------------
