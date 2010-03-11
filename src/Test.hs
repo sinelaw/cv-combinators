@@ -24,7 +24,7 @@ window = ImageProcessors.window (0 :: Int)
 canny :: ImageProcessors.ImageProcessor
 canny = ImageProcessors.canny 30 150 3
 
-keyPressed :: IO Bool
+keyPressed :: a -> IO Bool
 keyPressed _ = do
   res <- HighGui.waitKey (3::Int) :: IO Int
   return (res /= -1)
