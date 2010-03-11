@@ -161,9 +161,20 @@ run = runWith f
             mb
             return o
 
+runUntil :: (Monad m) => Processor m o a b -> a -> (o -> m Bool) -> m o
+runUntil p a untilF = runWith f p a
+    where f mo mb = do
+            o <- mo
+            mb
+            stop <- untilF o
+            if stop
+              then return o
+              else f mo mb
+
 runWith :: Monad m => (m o -> m b -> m o') -> Processor m o a b -> a -> m o'
 runWith f (Processor pf af cf rf) a = do
         x <- af a
         o' <- f (pf a x) (cf x)
         rf x
         return o'
+

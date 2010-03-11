@@ -17,7 +17,7 @@ camera :: ImageProcessors.ImageSource
 camera = ImageProcessors.camera (0::Int)
 
 resizer :: ImageProcessors.ImageProcessor
-resizer = ImageProcessors.resize (CxCore.CvSize 160 120) CV.CV_INTER_LINEAR
+resizer = ImageProcessors.resize (CxCore.CvSize 800 600) CV.CV_INTER_LINEAR
 
 window :: ImageProcessors.ImageSink
 window = ImageProcessors.window (0 :: Int)
@@ -25,7 +25,10 @@ window = ImageProcessors.window (0 :: Int)
 
 main :: IO ()
 main = forever $ do
-         Processor.run (window . camera) ()
-         HighGui.waitKey (3::Int) :: IO Int
+         Processor.runUntil (window . resizer . camera) () testKey
+             where testKey _ = do
+                     res <- HighGui.waitKey (3::Int) :: IO Int
+                     return (res /= -1)
+                     
             
 
