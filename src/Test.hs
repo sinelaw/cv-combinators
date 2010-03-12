@@ -22,7 +22,7 @@ window :: ImageProcessors.ImageSink
 window = ImageProcessors.window (0 :: Int)
 
 canny :: ImageProcessors.ImageProcessor
-canny = ImageProcessors.canny 30 190 3
+canny = ImageProcessors.canny 30 190 (3 :: Int)
 
 keyPressed :: a -> IO Bool
 keyPressed _ = fmap (/= -1) $ HighGui.waitKey 3

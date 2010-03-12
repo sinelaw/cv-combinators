@@ -27,9 +27,8 @@ module AI.CV.Processor where
 
 import Prelude hiding ((.),id)
 
-import Data.Default
 import Control.Category
-import Control.Applicative
+import Control.Applicative hiding (empty)
 import Control.Monad(liftM)
 
 -- | The type of Processors
@@ -47,8 +46,6 @@ import Control.Monad(liftM)
 --
 --    * x = type of internal state
 --
---    * o = output type of processing function (when processor is run, this is what is returned in the monad)
---
 -- The arguments to the constructor are:
 --
 --    1. processing function
@@ -59,21 +56,21 @@ import Control.Monad(liftM)
 --
 --    4. releaser for internal state (finalizer, run once)
 --
-data Processor m o a b where
-    Processor :: Monad m => (a -> x -> m o) -> (a -> m x) -> (x -> m b) -> (x -> m ()) -> (Processor m o a b)
+data Processor m a b where
+    Processor :: Monad m => (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ()) -> (Processor m a b)
     
 processor :: (Monad m) =>
-             (a -> x -> m o) -> (a -> m x) -> (x -> m b) -> (x -> m ())
-          -> Processor m o a b
+             (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ())
+          -> Processor m a b
 processor = Processor
 
-chain :: (Monad m) => Processor m o' a b'  -> Processor m o  b' b -> Processor m o a b
+chain :: (Monad m) => Processor m a b'  -> Processor m b' b -> Processor m a b
 chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
     where pf3 a (x1,x2) = do
-            pf1 a x1
-            b' <- cf1 x1
-            o2 <- pf2 b' x2
-            return o2
+            x1' <- pf1 a x1
+            b'  <- cf1 x1
+            x2' <- pf2 b' x2
+            return (x1', x2')
             
           af3 a = do
             x1 <- af1 a
@@ -91,44 +88,46 @@ chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af
   
   
 
-doNothing :: Monad m => m ()
-doNothing = do return ()
 
 -------------------------------------------------------------
-
-instance Monad m => Category (Processor m o) where
+-- the identity processor
+empty :: Monad m => Processor m a a
+empty = processor pf af cf rf
+    where pf _ = do return
+          af   = do return
+          cf   = do return
+          rf _ = do return ()
+               
+instance Monad m => Category (Processor m) where
   (.) = flip chain
-  id  = id
+  id  = empty
   
-instance Monad m => Functor (Processor m o a) where
+instance Monad m => Functor (Processor m a) where
   -- |
   -- > [[ fmap ]] = (.)
   --
   -- This could have used fmap internally as a Type Class Morphism, but monads
   -- don't neccesary implement the obvious: fmap = liftM.
-  --
-  -- fmap :: (b -> c) -> Processor m o a b -> Processor m o a c
   fmap f (Processor pf af cf rf) = processor pf af cf' rf
     where cf' x = liftM f (cf x) 
 
--- | We need the Default o constraint for pure, because we have to "invent" a value of type o to return
--- from the processing function (pf)
-instance (Monad m, Default o) => Applicative (Processor m o a) where
+instance (Monad m) => Applicative (Processor m a) where
   -- | 
   -- > [[ pure ]] = const
-  pure b = processor pf af id' rf
-    where pf = const . const $ do return def
-          af = const $ do return b
-          id' = do return
-          rf = const doNothing 
+  pure b = processor pf af cf rf
+    where pf _ = do return
+          af _ = do return ()
+          cf _ = do return b
+          rf _ = do return ()
             
   -- |
   -- [[ pf <*> px ]] = \a -> ([[ pf ]] a) ([[ px ]] a)
   -- (same as '(<*>)' on functions)
   (<*>) (Processor pf af cf rf) (Processor px ax cx rx) = processor py ay cy ry
     where py a (stateF, stateX) = do
-            pf a stateF
-            px a stateX
+            f' <- pf a stateF
+            x' <- px a stateX
+            return (f', x')
             
           ay a = do
             stateF <- af a
@@ -147,34 +146,22 @@ instance (Monad m, Default o) => Applicative (Processor m o a) where
   
 -------------------------------------------------------------
             
-empty :: Monad m => Processor m () a ()
-empty = processor pf af id' rf
-    where pf = const . const $ doNothing
-          af = const doNothing
-          id' = do return
-          rf = const doNothing 
-               
-run :: (Monad m) => Processor m o a b -> a -> m o
-run = runWith f
-    where f mo mb = do
-            o <- mo
-            mb
-            return o
+run :: (Monad m) => Processor m a b -> a -> m b
+run = runWith id
 
-runUntil :: (Monad m) => Processor m o a b -> a -> (o -> m Bool) -> m o
+runUntil :: (Monad m) => Processor m a b -> a -> (b -> m Bool) -> m b
 runUntil p a untilF = runWith f p a
-    where f mo mb = do
-            o <- mo
-            mb
-            stop <- untilF o
+    where f mb = do
+            b <- mb
+            stop <- untilF b
             if stop
-              then return o
-              else f mo mb
+              then return b
+              else f mb
 
-runWith :: Monad m => (m o -> m b -> m o') -> Processor m o a b -> a -> m o'
+runWith :: Monad m => (m b -> m b') -> Processor m a b -> a -> m b'
 runWith f (Processor pf af cf rf) a = do
         x <- af a
-        o' <- f (pf a x) (cf x)
+        b' <- f (pf a x >>= cf)
         rf x
-        return o'
+        return b'
 

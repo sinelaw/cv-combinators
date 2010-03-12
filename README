@@ -26,3 +26,8 @@ TODO:
   - somehow run each processor only once, even if graph was split (and even re-joined)
 
 * Embed image depth/nchannels in the types? If not, we can't assure safety at all when building OpenCV processor chains, because some functions require certain formats (such as cvCanny requiring grayscale)
+
+* Consider the cost of eliminating the special output type for the process function:
+  - we went from a -> x -> m o ,  to: a -> x -> m x
+  - the cost is that you can't runWith a function that uses the process' result, because it doesn't know
+  - the output type.
