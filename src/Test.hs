@@ -16,10 +16,10 @@ camera :: ImageProcessors.ImageSource
 camera = ImageProcessors.camera (0::Int)
 
 resizer :: ImageProcessors.ImageProcessor
-resizer = ImageProcessors.resize (CxCore.CvSize 800 600) CV.CV_INTER_LINEAR
+resizer = ImageProcessors.resize (CxCore.CvSize 320 240) CV.CV_INTER_LINEAR
 
 window :: ImageProcessors.ImageSink
-window = ImageProcessors.window (0 :: Int)
+window = ImageProcessors.window (1 :: Int)
 
 canny :: ImageProcessors.ImageProcessor
 canny = ImageProcessors.canny 30 190 (3 :: Int)

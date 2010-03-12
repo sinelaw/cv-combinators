@@ -36,14 +36,14 @@ camera index = processor processQueryFrame allocateCamera fromState releaseNext
             HighGui.cvReleaseCapture $ cap
 ------------------------------------------------------------------
   
-
+-- windows with the same index will be the same window....is this ok?
 window :: Int -> ImageSink
 window num = processor procFunc allocFunc (do return) (do return)
     where procFunc :: (Ptr IplImage -> () -> IO ())
           procFunc src x = (HighGui.showImage (fromIntegral num) src) >> (return x)
           
           allocFunc :: (Ptr IplImage -> IO ())
-          allocFunc _ = HighGui.newWindow (fromIntegral num) 0
+          allocFunc _ = HighGui.newWindow (fromIntegral num) True
 
 ------------------------------------------------------------------
 
