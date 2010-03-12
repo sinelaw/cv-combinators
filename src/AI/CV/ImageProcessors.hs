@@ -5,7 +5,8 @@ import AI.CV.Processor
 import qualified AI.CV.OpenCV.CV as CV
 import qualified AI.CV.OpenCV.CxCore as CxCore
 import qualified AI.CV.OpenCV.HighGui as HighGui
-import AI.CV.OpenCV.CxCore(IplImage)
+import AI.CV.OpenCV.CxCore(IplImage, CvSize, CvRect, CvMemStorage)
+import AI.CV.OpenCV.CV(CvHaarClassifierCascade)
 
 import Foreign.Ptr
 
@@ -91,9 +92,29 @@ canny thres1 thres2 size = processor processCanny allocateCanny convertState rel
 
 ------------------------------------------------------------------
 
--- haarDetect :: String -> CDouble -> CInt -> HaarDetectFlag -> CvSize -> Processor IO () (Ptr IplImage) [CvRect]
--- haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc 
---     where procFunc :: (Ptr IplImage) -> (Ptr CvHaarClassifierCascade, Ptr CvStorage) -> IO ()
---           procFunc image (cascade, storage) = do
---             seqP <- cvHaarDetectObjects image cascade storage scaleFactor minNeighbors flags minSize
+haarDetect :: String -> Double -> Int -> CV.HaarDetectFlag -> CvSize -> Processor IO (Ptr IplImage) [CvRect]
+haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc 
+    where procFunc :: (Ptr IplImage) -> ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage)) 
+                   -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
+          procFunc image (_, x@(cascade, storage)) = do
+            seqP <- CV.cvHaarDetectObjects image cascade storage (realToFrac scaleFactor) (fromIntegral minNeighbors) flags minSize
+            recs <- CxCore.seqToList seqP
+            return (recs, x)
+            
+          allocFunc :: Ptr IplImage -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
+          allocFunc _ = do
+            storage <- CxCore.cvCreateMemStorage 0
+            (cascade, name) <- CxCore.cvLoad cascadeFileName storage Nothing
+            print name -- todo verify that this is a haar cascade
+            return ([], (cascade, storage))
+          
+          convFunc = do return . fst
+          
+          freeFunc (_, (cascade, storage)) = do
+            CxCore.cvReleaseMemStorage storage
+            -- todo release the cascade usign cvReleaseHaarClassifierCascade
+          
+            
+                             
+            
             
