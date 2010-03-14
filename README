@@ -22,7 +22,7 @@ TODO:
   How to avoid this? Special processor? what?
 
 * forkJoin:
-  - Instead of this, write "splitter" and "joiner" processor primitives?
+  - can this be implemented using parallel (or any other primtives?)
 
 * Allow viewing the processor graph (See deep vs. shallow below)
 

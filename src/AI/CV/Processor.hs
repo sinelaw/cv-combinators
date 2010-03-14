@@ -22,6 +22,8 @@
 --   }
 --   releaseFoo(dst);
 --
+-- You can use the 'runUntil' function below to emulate that loop.
+--
 -- Processor is an instance of Category, Functor, Applicative and Arrow. 
 
 module AI.CV.Processor where
@@ -51,13 +53,13 @@ import Control.Monad(liftM, join)
 --
 -- The arguments to the constructor are:
 --
---    1. processing function
+--    1. Processing function: Takes input and internal state, and returns new internal state.
 --
---    2. allocator for internal state (this is run only once)
+--    2. Allocator for internal state (this is run only once): Takes (usually the first) input, and returns initial internal state.
 --
---    3. convertor from state x to output b
+--    3. Convertor from state x to output b: Takes internal state and returns the output.
 --
---    4. releaser for internal state (finalizer, run once)
+--    4. Releaser for internal state (finalizer, run once): Run after processor is done being used, to release the internal state.
 --
 data Processor m a b where
     Processor :: Monad m => (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ()) -> (Processor m a b)
