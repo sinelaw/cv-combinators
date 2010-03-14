@@ -52,3 +52,15 @@ TODO:
     - add something like 'let x = ...' to the DSL itself, so that i can later tell that a value is shared.
 
 
+* DEBUG: if we add prints in keyPressed, detector and drawRects, we get results like the following, which don't make much sense - looks like the drawing processor gets its input with "lag" w.r.t detector
+  ()
+  "detected rects"
+  [CvRect {rectX = 153, rectY = 118, rectWidth = 157, rectHeight = 157}]
+  "drawing rects:"
+  [CvRect {rectX = 161, rectY = 128, rectWidth = 142, rectHeight = 142},CvRect {rectX = 24, rectY = 262, rectWidth = 24, rectHeight = 24}]
+  ()
+  "detected rects"
+  [CvRect {rectX = 156, rectY = 122, rectWidth = 153, rectHeight = 153},CvRect {rectX = 8, rectY = 102, rectWidth = 39, rectHeight = 39}]
+  "drawing rects:"
+  [CvRect {rectX = 153, rectY = 118, rectWidth = 157, rectHeight = 157}]
+  ()

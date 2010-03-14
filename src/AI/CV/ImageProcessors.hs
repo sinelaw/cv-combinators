@@ -42,8 +42,7 @@ type ImageProcessor = Processor IO (Ptr IplImage) (Ptr IplImage)
 
 -- | Predicate for pressed keys
 keyPressed :: Show a => a -> IO Bool
-keyPressed x = do
-  print x
+keyPressed _ = do
   fmap (/= -1) $ HighGui.waitKey 3
 
 -- | Runs the processor until a predicate is true, for predicates, and processors that take () as input

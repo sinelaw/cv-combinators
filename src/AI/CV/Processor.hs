@@ -229,16 +229,19 @@ run = runWith id
 -- | Keeps running the processing function in a loop until a predicate on the output is true.
 -- Useful for processors whose main function is after the allocation and before deallocation.
 runUntil :: (Monad m) => Processor m a b -> a -> (b -> m Bool) -> m b
-runUntil p a untilF = runWith f p a
-    where f mb = do
-            b <- mb
-            stop <- untilF b
-            if stop
-              then return b
-              else f mb
+runUntil (Processor pf af cf rf) a untilF = do
+  x <- af a
+  let repeatF y = do
+        y' <- pf a y
+        b <- cf y'
+        b' <- untilF b
+        if b' then return b else repeatF y'
+  d <- repeatF x
+  rf x
+  return d
+
 
 -- | Runs the processor once, but passes the processing + conversion action to the given function.
--- This is used, for example, in 'runUntil' to loop on the processing until a predicate is met.
 runWith :: Monad m => (m b -> m b') -> Processor m a b -> a -> m b'
 runWith f (Processor pf af cf rf) a = do
         x <- af a
