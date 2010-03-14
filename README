@@ -16,10 +16,15 @@ test1 = resizer . camera
 
 TODO:
 -----
+* Copying images, such as for the drawRects processor, is redundant in many cases because the input
+  image is an allocated output image of the previous processor, and if nobody else uses this as input
+  there's no reason to not draw "on the image" itself, no need to copy.
+  How to avoid this? Special processor? what?
 
-* Write "splitter" and "joiner" processor primitives
+* forkJoin:
+  - Instead of this, write "splitter" and "joiner" processor primitives?
 
-* Allow viewing the processor graph
+* Allow viewing the processor graph (See deep vs. shallow below)
 
 * Use MaybeT and processors that output Maybes to implement a "FRP" (?) framework:
   - continuously re-run the processing loop, which will terminate an iteration whenever one process returns Nothing
@@ -31,3 +36,19 @@ TODO:
   - we went from a -> x -> m o ,  to: a -> x -> m x
   - the cost is that you can't runWith a function that uses the process' result, because it doesn't know
   - the output type.
+
+* Consider what happens with recursion in the host language (in terms of interpretation by a deep-dsl):
+  -  blah = toBlahType (Processor blah ... )
+
+
+* deep vs. shallow dsl:
+  - deep:
+    - optimization (in deep seems easier?) - not running same processor twice if possible
+    - knowing which new outputs are interesting in a join (>-) - if a parallelized side returns Nothing
+  - shallow: eliminates intepretations in recursions?
+  - possibilities:
+    - use shallow combinators, plus save "deep" stuff about the structure that was combined to be 
+      used for optimization etc. during 'running' of the structure
+    - add something like 'let x = ...' to the DSL itself, so that i can later tell that a value is shared.
+
+
