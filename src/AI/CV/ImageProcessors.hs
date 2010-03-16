@@ -1,5 +1,5 @@
-module AI.CV.ImageProcessors where
 
+--------------------------------------------------------------
 -- | 
 -- Module      : AI.CV.ImageProcessors
 -- Copyright   : (c) Noam Lewis 2010
@@ -21,8 +21,12 @@ module AI.CV.ImageProcessors where
 -- > edge = canny 30 190 3 -- Edge detecting processor using canny operator
 -- >
 -- > test = win . edge . cam   -- A processor that captures frames from camera and displays edge-detected version in the window.
+--------------------------------------------------------------
+module AI.CV.ImageProcessors where
+
 
 import AI.CV.Processor
+
 import qualified AI.CV.OpenCV.CV as CV
 import qualified AI.CV.OpenCV.CxCore as CxCore
 import qualified AI.CV.OpenCV.HighGui as HighGui

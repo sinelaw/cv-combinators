@@ -3,6 +3,21 @@ Functional Combinators for Computer Vision
 This library is intended to wrap CV primitives in a pure functional API. 
 Currently the idea is to use HOpenCV (OpenCV bindings for Haskell) as the backend.
 
+Semantic Model:
+---------------
+
+[[ Processor m a b ]] = ???
+
+Options:
+* [[ Processor m a b ]] = a -> b
+  What happens to m?!?
+
+* [[ Processor m a b ]] = m (a -> b)
+  If m is IO, what is IO?
+
+Therefore we must rethink our model....
+
+
 Bottom Line:
 ------------
 
