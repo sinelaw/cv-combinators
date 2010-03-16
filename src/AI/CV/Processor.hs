@@ -8,7 +8,7 @@
 -- Stability   : experimental
 -- Portability : tested on GHC only
 --
--- Framework for expressing monadic actions that require initialization and finalizers.
+-- Framework for expressing IO actions that require initialization and finalizers.
 -- This module provides a *functional* interface for defining and chaining a series of processors.
 --
 -- Motivating example: bindings to C libraries that use functions such as: f(foo *src, foo *dst),
@@ -40,14 +40,12 @@ import Control.Monad(liftM, join)
 --
 -- The semantic model is: 
 --
--- > [[ Processor m o a b ]] = a -> b
+-- > [[ Processor a b ]] = a -> b
 --
--- The idea is that the monad m is usually IO, and that a and b are usually pointers.
+-- The idea is that a and b can be (and are usually?) pointers.
 -- It is meant for functions that require a pre-allocated output pointer to operate.
 -- 
 --    * a, b = the input and output types of the processor (think a -> b)
---
---    * m = monad in which the processor operates
 --
 --    * x = type of internal state
 --
@@ -61,16 +59,16 @@ import Control.Monad(liftM, join)
 --
 --    4. Releaser for internal state (finalizer, run once): Run after processor is done being used, to release the internal state.
 --
-data Processor m a b where
-    Processor :: Monad m => (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ()) -> (Processor m a b)
+data Processor a b where
+    Processor :: (a -> x -> IO x) -> (a -> IO x) -> (x -> IO b) -> (x -> IO ()) -> (Processor a b)
     
-processor :: (Monad m) =>
-             (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ())
-          -> Processor m a b
+processor :: 
+             (a -> x -> IO x) -> (a -> IO x) -> (x -> IO b) -> (x -> IO ())
+          -> Processor a b
 processor = Processor
 
 -- | Chains two processors serially, so one feeds the next.
-chain :: (Monad m) => Processor m a b'  -> Processor m b' b -> Processor m a b
+chain :: Processor a b'  -> Processor b' b -> Processor a b
 chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
     where pf3 a (x1,x2) = do
             x1' <- pf1 a x1
@@ -94,7 +92,7 @@ chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af
   
 -- | A processor that represents two sub-processors in parallel (although the current implementation runs them
 -- sequentially, but that may change in the future)
-parallel :: (Monad m) => Processor m a b -> Processor m c d -> Processor m (a,c) (b,d)
+parallel :: Processor a b -> Processor c d -> Processor (a,c) (b,d)
 parallel (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
     where pf3 (a,c) (x1,x2) = do
             x1' <- pf1 a x1
@@ -120,45 +118,47 @@ parallel (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3
 -- 
 -- Semantic meaning, using Arrow's (&&&) operator:
 -- [[ forkJoin ]] = &&& 
--- Or, considering the Monad instance of functions (which are the semantic meanings of a processor):
--- [[ forkJoin ]] = liftM2 (,)
+-- Or, considering the Applicative instance of functions (which are the semantic meanings of a processor):
+-- [[ forkJoin ]] = liftA2 (,)
 -- Alternative implementation to consider: f &&& g = (,) <&> f <*> g
-forkJoin :: (Monad m) => Processor m a b  -> Processor m a b' -> Processor m a (b,b')
+forkJoin :: Processor a b  -> Processor a b' -> Processor a (b,b')
 forkJoin (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
-    where pf3 a (x1,x2) = do
+    where --pf3 :: a -> (x1,x2) -> IO (x1,x2)
+          pf3 a (x1,x2) = do
             x1' <- pf1 a x1
             x2' <- pf2 a x2
             return (x1', x2')
             
+          --af3 :: a -> IO (x1, x2)
           af3 a = do
             x1 <- af1 a
             x2 <- af2 a
             return (x1,x2)
-            
+          
+          --cf3 :: (x1,x2) -> IO (b,b')
           cf3 (x1,x2) = do
-            b  <- cf1 x1
+            b <- cf1 x1
             b' <- cf2 x2
             return (b,b')
-            
-          rf3 (x1,x2) = do
-            rf2 x2
-            rf1 x1
+          
+          --rf3 :: (x1,x2) -> IO ()
+          rf3 (x1,x2) = rf2 x2 >> rf1 x1
 
 
 -------------------------------------------------------------
 -- | The identity processor: output = input. Semantically, [[ empty ]] = id
-empty :: Monad m => Processor m a a
+empty :: Processor a a
 empty = processor pf af cf rf
     where pf _ = do return
           af   = do return
           cf   = do return
           rf _ = do return ()
                
-instance Monad m => Category (Processor m) where
+instance Category Processor where
   (.) = flip chain
   id  = empty
   
-instance Monad m => Functor (Processor m a) where
+instance Functor (Processor a) where
   -- |
   -- > [[ fmap ]] = (.)
   --
@@ -167,18 +167,7 @@ instance Monad m => Functor (Processor m a) where
   fmap f (Processor pf af cf rf) = processor pf af cf' rf
     where cf' x = liftM f (cf x) 
 
--- | Splits (duplicates) the output of a functor, or on this case a processor.
-split :: Functor f => f a -> f (a,a)
-split = (join (,) <$>)
-
--- | 'f --< g' means: split f and feed it into g. Useful for feeding parallelized (***'d) processors.
--- For example, a --< (b &&& c)
-(--<) :: (Functor (cat a), Category cat) => cat a a1 -> cat (a1, a1) c -> cat a c
-f --< g = split f >>> g
-infixr 1 --<
-
-
-instance (Monad m) => Applicative (Processor m a) where
+instance Applicative (Processor a) where
   -- | 
   -- > [[ pure ]] = const
   pure b = processor pf af cf rf
@@ -215,22 +204,36 @@ instance (Monad m) => Applicative (Processor m a) where
 --  first f = (,) <$> (arr fst >>> f) <*> arr snd
 --  arr f = f <$> id
 --  f *** g = (arr fst >>> f) &&& (arr snd >>> g)
-instance Monad m => Arrow (Processor m) where
+instance Arrow Processor where
   arr = flip liftA id
   (&&&) = forkJoin
   (***) = parallel
   first = (*** id)
   second = (id ***)
   
+
+-------------------------------------------------------------
+
+-- | Splits (duplicates) the output of a functor, or on this case a processor.
+split :: Functor f => f a -> f (a,a)
+split = (join (,) <$>)
+
+-- | 'f --< g' means: split f and feed it into g. Useful for feeding parallelized (***'d) processors.
+-- For example, a --< (b *** c) = a >>> (b &&& c)
+(--<) :: (Functor (cat a), Category cat) => cat a a1 -> cat (a1, a1) c -> cat a c
+f --< g = split f >>> g
+infixr 1 --<
+
+
 -------------------------------------------------------------
             
 -- | Runs the processor once: allocates, processes, converts to output, and deallocates.
-run :: (Monad m) => Processor m a b -> a -> m b
+run :: Processor a b -> a -> IO b
 run = runWith id
 
 -- | Keeps running the processing function in a loop until a predicate on the output is true.
 -- Useful for processors whose main function is after the allocation and before deallocation.
-runUntil :: (Monad m) => Processor m a b -> a -> (b -> m Bool) -> m b
+runUntil :: Processor a b -> a -> (b -> IO Bool) -> IO b
 runUntil (Processor pf af cf rf) a untilF = do
   x <- af a
   let repeatF y = do
@@ -244,7 +247,7 @@ runUntil (Processor pf af cf rf) a untilF = do
 
 
 -- | Runs the processor once, but passes the processing + conversion action to the given function.
-runWith :: Monad m => (m b -> m b') -> Processor m a b -> a -> m b'
+runWith :: (IO b -> IO b') -> Processor a b -> a -> IO b'
 runWith f (Processor pf af cf rf) a = do
         x <- af a
         b' <- f (pf a x >>= cf)

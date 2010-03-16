@@ -1,31 +1,40 @@
 Functional Combinators for Computer Vision
+==========================================
 
 This library is intended to wrap CV primitives in a pure functional API. 
 Currently the idea is to use HOpenCV (OpenCV bindings for Haskell) as the backend.
 
-Semantic Model:
----------------
+Processor Module - Semantic Design
+----------------------------------
 
-[[ Processor m a b ]] = ???
+The meaning of a Processor is given by:
 
-Options:
-* [[ Processor m a b ]] = a -> b
-  What happens to m?!?
+[[ Processor a b ]] = a -> b
 
-* [[ Processor m a b ]] = m (a -> b)
-  If m is IO, what is IO?
+Semantic typeclass instances: All the instance functions are Type Class Morphisms - just replace the processor with the function, and use the appropriate function instance.
 
-Therefore we must rethink our model....
+[[ Category Processor ]] = Category [[ Processor ]] = Category (a -> b)
+        [[ p1 . p2 ]] = [[ p1 ]] . [[ p2 ]]
+        [[ id ]] = id
 
+[[ Functor (Processor a) ]] = Functor [[ Processor a ]] = ...
+        [[ fmap f p ]] = fmap f [[ p ]]
+                       = f . [[ p ]]
 
-Bottom Line:
-------------
+[[ Applicative (Processor a) ]] = Applicative [[ Processor a ]] = ...
+        [[ pure ]] = pure 
+                   = const
 
-camera :: PIO () (Ptr CxCore.IplImage)
+Arrow: etc...
 
-resizer :: PIO (Ptr CxCore.IplImage) (Ptr CxCore.IplImage)
+ImageProcessor - Examples
+-------------------------
 
-test1 :: PIO () (Ptr CxCore.IplImage)
+camera :: Processor () (Ptr CxCore.IplImage)
+
+resizer :: Processor (Ptr CxCore.IplImage) (Ptr CxCore.IplImage)
+
+test1 :: Processor () (Ptr CxCore.IplImage)
 test1 = resizer . camera 
 
 

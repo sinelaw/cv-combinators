@@ -19,7 +19,7 @@ resizer = resize 320 240 CV.CV_INTER_LINEAR
 edges :: ImageProcessor
 edges = canny 30 190 3
 
-faceDetect :: Processor.Processor IO PImage [CvRect]
+faceDetect :: Processor.Processor PImage [CvRect]
 faceDetect = haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml" 1.2 3 CV.cvHaarDoCannyPruning (CvSize 50 50)
   
 

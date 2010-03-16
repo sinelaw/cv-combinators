@@ -35,9 +35,9 @@ import AI.CV.OpenCV.CV(CvHaarClassifierCascade)
 
 import Foreign.Ptr
 
-type ImageSink      = Processor IO (Ptr IplImage) ()
-type ImageSource    = Processor IO ()             (Ptr IplImage)
-type ImageProcessor = Processor IO (Ptr IplImage) (Ptr IplImage)
+type ImageSink      = Processor (Ptr IplImage) ()
+type ImageSource    = Processor ()             (Ptr IplImage)
+type ImageProcessor = Processor (Ptr IplImage) (Ptr IplImage)
 
 
 
@@ -51,11 +51,11 @@ keyPressed _ = do
 
 -- | Runs the processor until a predicate is true, for predicates, and processors that take () as input
 -- (such as chains that start with a camera).
-runTill :: Monad m => Processor m () b -> (b -> m Bool) -> m b
+runTill :: Processor () b -> (b -> IO Bool) -> IO b
 runTill = flip runUntil ()
 
 -- | Name (and type) says it all.
-runTillKeyPressed :: (Show a) => Processor IO () a -> IO ()
+runTillKeyPressed :: (Show a) => Processor () a -> IO ()
 runTillKeyPressed f = (f `runTill` keyPressed) >> (return ())
 
 ------------------------------------------------------------------
@@ -155,7 +155,7 @@ haarDetect :: String  -- ^ Cascade filename (OpenCV comes with several, includin
            -> Int     -- ^ min neighbors
            -> CV.HaarDetectFlag -- ^ flags
            -> CvSize  -- ^ min size
-           -> Processor IO (Ptr IplImage) [CvRect]
+           -> Processor (Ptr IplImage) [CvRect]
 haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc 
     where procFunc :: (Ptr IplImage) -> ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage)) 
                    -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
@@ -184,7 +184,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
 -- need a datatype that combines the shape types for that.
             
 -- | OpenCV's cvRectangle, currently without width, color or line type control
-drawRects :: Processor IO (Ptr IplImage, [CvRect]) (Ptr IplImage)
+drawRects :: Processor (Ptr IplImage, [CvRect]) (Ptr IplImage)
 drawRects = processor procFunc (CxCore.cvCloneImage . fst) (do return) CxCore.cvReleaseImage
     where procFunc (src,rects) dst = do
             CxCore.cvCopy src dst
