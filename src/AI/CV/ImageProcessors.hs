@@ -35,9 +35,9 @@ import AI.CV.OpenCV.CV(CvHaarClassifierCascade)
 
 import Foreign.Ptr
 
-type ImageSink      = Processor (Ptr IplImage) ()
-type ImageSource    = Processor ()             (Ptr IplImage)
-type ImageProcessor = Processor (Ptr IplImage) (Ptr IplImage)
+type ImageSink      = IOProcessor (Ptr IplImage) ()
+type ImageSource    = IOProcessor ()             (Ptr IplImage)
+type ImageProcessor = IOProcessor (Ptr IplImage) (Ptr IplImage)
 
 
 
@@ -51,21 +51,16 @@ keyPressed _ = do
 
 -- | Runs the processor until a predicate is true, for predicates, and processors that take () as input
 -- (such as chains that start with a camera).
-runTill :: Processor () b -> (b -> IO Bool) -> IO b
+runTill :: IOProcessor () b -> (b -> IO Bool) -> IO b
 runTill = flip runUntil ()
 
 -- | Name (and type) says it all.
-runTillKeyPressed :: (Show a) => Processor () a -> IO ()
+runTillKeyPressed :: (Show a) => IOProcessor () a -> IO ()
 runTillKeyPressed f = (f `runTill` keyPressed) >> (return ())
 
 ------------------------------------------------------------------
-
-
--- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
--- should work with most webcames. See OpenCV's docs for information.
--- This processor outputs the latest image from the camera at each invocation.
-camera :: Int -> ImageSource
-camera index = processor processQueryFrame allocateCamera fromState releaseNext
+capture :: IO (Ptr HighGui.CvCapture) -> ImageSource
+capture pCap = processor processQueryFrame allocateCamera fromState releaseNext
     where processQueryFrame :: () -> (Ptr CxCore.IplImage, Ptr HighGui.CvCapture) 
                                -> IO (Ptr CxCore.IplImage, Ptr HighGui.CvCapture)
           processQueryFrame _ (_, cap) = do
@@ -74,7 +69,7 @@ camera index = processor processQueryFrame allocateCamera fromState releaseNext
           
           allocateCamera :: () -> IO (Ptr CxCore.IplImage, Ptr HighGui.CvCapture)
           allocateCamera _ = do
-            cap <- HighGui.cvCreateCameraCapture (fromIntegral index)
+            cap <- pCap
             newFrame <- HighGui.cvQueryFrame cap
             return (newFrame, cap)
           
@@ -83,6 +78,17 @@ camera index = processor processQueryFrame allocateCamera fromState releaseNext
           
           releaseNext (_, cap) = do
             HighGui.cvReleaseCapture $ cap
+
+
+-- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
+-- should work with most webcames. See OpenCV's docs for information.
+-- This processor outputs the latest image from the camera at each invocation.
+camera :: Int -> ImageSource
+camera index = capture (HighGui.cvCreateCameraCapture (fromIntegral index))
+
+videoFile :: String -> ImageSource
+videoFile fileName = capture (HighGui.cvCreateFileCapture fileName)
+
 ------------------------------------------------------------------
 -- GUI stuff  
             
@@ -155,7 +161,7 @@ haarDetect :: String  -- ^ Cascade filename (OpenCV comes with several, includin
            -> Int     -- ^ min neighbors
            -> CV.HaarDetectFlag -- ^ flags
            -> CvSize  -- ^ min size
-           -> Processor (Ptr IplImage) [CvRect]
+           -> IOProcessor (Ptr IplImage) [CvRect]
 haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc 
     where procFunc :: (Ptr IplImage) -> ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage)) 
                    -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
@@ -184,7 +190,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
 -- need a datatype that combines the shape types for that.
             
 -- | OpenCV's cvRectangle, currently without width, color or line type control
-drawRects :: Processor (Ptr IplImage, [CvRect]) (Ptr IplImage)
+drawRects :: IOProcessor (Ptr IplImage, [CvRect]) (Ptr IplImage)
 drawRects = processor procFunc (CxCore.cvCloneImage . fst) (do return) CxCore.cvReleaseImage
     where procFunc (src,rects) dst = do
             CxCore.cvCopy src dst

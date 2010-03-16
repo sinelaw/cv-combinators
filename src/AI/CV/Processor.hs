@@ -40,7 +40,7 @@ import Control.Monad(liftM, join)
 --
 -- The semantic model is: 
 --
--- > [[ Processor a b ]] = a -> b
+-- > [[ IOProcessor a b ]] = a -> b
 --
 -- The idea is that a and b can be (and are usually?) pointers.
 -- It is meant for functions that require a pre-allocated output pointer to operate.
@@ -59,16 +59,18 @@ import Control.Monad(liftM, join)
 --
 --    4. Releaser for internal state (finalizer, run once): Run after processor is done being used, to release the internal state.
 --
-data Processor a b where
-    Processor :: (a -> x -> IO x) -> (a -> IO x) -> (x -> IO b) -> (x -> IO ()) -> (Processor a b)
+data Processor m a b where
+    Processor :: Monad m => (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ()) -> (Processor m a b)
     
-processor :: 
-             (a -> x -> IO x) -> (a -> IO x) -> (x -> IO b) -> (x -> IO ())
-          -> Processor a b
+type IOProcessor a b = Processor IO a b
+
+processor :: Monad m =>
+             (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ())
+          -> Processor m a b
 processor = Processor
 
 -- | Chains two processors serially, so one feeds the next.
-chain :: Processor a b'  -> Processor b' b -> Processor a b
+chain :: Processor m a b'  -> Processor m b' b -> Processor m a b
 chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
     where pf3 a (x1,x2) = do
             x1' <- pf1 a x1
@@ -92,7 +94,7 @@ chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af
   
 -- | A processor that represents two sub-processors in parallel (although the current implementation runs them
 -- sequentially, but that may change in the future)
-parallel :: Processor a b -> Processor c d -> Processor (a,c) (b,d)
+parallel :: Processor m a b -> Processor m c d -> Processor m (a,c) (b,d)
 parallel (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
     where pf3 (a,c) (x1,x2) = do
             x1' <- pf1 a x1
@@ -121,44 +123,44 @@ parallel (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3
 -- Or, considering the Applicative instance of functions (which are the semantic meanings of a processor):
 -- [[ forkJoin ]] = liftA2 (,)
 -- Alternative implementation to consider: f &&& g = (,) <&> f <*> g
-forkJoin :: Processor a b  -> Processor a b' -> Processor a (b,b')
+forkJoin :: Processor m a b  -> Processor m a b' -> Processor m a (b,b')
 forkJoin (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af3 cf3 rf3
-    where --pf3 :: a -> (x1,x2) -> IO (x1,x2)
+    where --pf3 :: a -> (x1,x2) -> m (x1,x2)
           pf3 a (x1,x2) = do
             x1' <- pf1 a x1
             x2' <- pf2 a x2
             return (x1', x2')
             
-          --af3 :: a -> IO (x1, x2)
+          --af3 :: a -> m (x1, x2)
           af3 a = do
             x1 <- af1 a
             x2 <- af2 a
             return (x1,x2)
           
-          --cf3 :: (x1,x2) -> IO (b,b')
+          --cf3 :: (x1,x2) -> m (b,b')
           cf3 (x1,x2) = do
             b <- cf1 x1
             b' <- cf2 x2
             return (b,b')
           
-          --rf3 :: (x1,x2) -> IO ()
+          --rf3 :: (x1,x2) -> m ()
           rf3 (x1,x2) = rf2 x2 >> rf1 x1
 
 
 -------------------------------------------------------------
 -- | The identity processor: output = input. Semantically, [[ empty ]] = id
-empty :: Processor a a
+empty :: Monad m => Processor m a a
 empty = processor pf af cf rf
     where pf _ = do return
           af   = do return
           cf   = do return
           rf _ = do return ()
                
-instance Category Processor where
+instance Monad m => Category (Processor m) where
   (.) = flip chain
   id  = empty
   
-instance Functor (Processor a) where
+instance Monad m => Functor (Processor m a) where
   -- |
   -- > [[ fmap ]] = (.)
   --
@@ -167,7 +169,7 @@ instance Functor (Processor a) where
   fmap f (Processor pf af cf rf) = processor pf af cf' rf
     where cf' x = liftM f (cf x) 
 
-instance Applicative (Processor a) where
+instance Monad m => Applicative (Processor m a) where
   -- | 
   -- > [[ pure ]] = const
   pure b = processor pf af cf rf
@@ -204,7 +206,7 @@ instance Applicative (Processor a) where
 --  first f = (,) <$> (arr fst >>> f) <*> arr snd
 --  arr f = f <$> id
 --  f *** g = (arr fst >>> f) &&& (arr snd >>> g)
-instance Arrow Processor where
+instance Monad m => Arrow (Processor m) where
   arr = flip liftA id
   (&&&) = forkJoin
   (***) = parallel
@@ -228,12 +230,12 @@ infixr 1 --<
 -------------------------------------------------------------
             
 -- | Runs the processor once: allocates, processes, converts to output, and deallocates.
-run :: Processor a b -> a -> IO b
+run :: Monad m => Processor m a b -> a -> m b
 run = runWith id
 
 -- | Keeps running the processing function in a loop until a predicate on the output is true.
 -- Useful for processors whose main function is after the allocation and before deallocation.
-runUntil :: Processor a b -> a -> (b -> IO Bool) -> IO b
+runUntil :: Monad m => Processor m a b -> a -> (b -> m Bool) -> m b
 runUntil (Processor pf af cf rf) a untilF = do
   x <- af a
   let repeatF y = do
@@ -247,7 +249,7 @@ runUntil (Processor pf af cf rf) a untilF = do
 
 
 -- | Runs the processor once, but passes the processing + conversion action to the given function.
-runWith :: (IO b -> IO b') -> Processor a b -> a -> IO b'
+runWith :: Monad m => (m b -> m b') -> Processor m a b -> a -> m b'
 runWith f (Processor pf af cf rf) a = do
         x <- af a
         b' <- f (pf a x >>= cf)

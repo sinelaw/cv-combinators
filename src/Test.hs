@@ -19,12 +19,16 @@ resizer = resize 320 240 CV.CV_INTER_LINEAR
 edges :: ImageProcessor
 edges = canny 30 190 3
 
-faceDetect :: Processor.Processor PImage [CvRect]
+faceDetect :: Processor.IOProcessor PImage [CvRect]
 faceDetect = haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml" 1.2 3 CV.cvHaarDoCannyPruning (CvSize 50 50)
   
+captureDev :: ImageSource
+captureDev = videoFile "/tmp/video.avi"
+-- If you have a webcam, uncomment this, and comment the other definition.
+--captureDev = camera 0
 
 main :: IO ()
-main = runTillKeyPressed (camera 0 --< (second faceDetect) >>> drawRects >>> window 0) 
+main = runTillKeyPressed (captureDev --< (second faceDetect) >>> drawRects >>> window 0) 
             
 -- Shows the camera output in two windows (same images in both).
 --main = runTillKeyPressed ((camera 0) --< (window 0 *** window 1))

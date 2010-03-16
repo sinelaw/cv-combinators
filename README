@@ -9,23 +9,28 @@ Processor Module - Semantic Design
 
 The meaning of a Processor is given by:
 
-[[ Processor a b ]] = a -> b
+[[ IOProcessor a b ]] = a -> b
 
 Semantic typeclass instances: All the instance functions are Type Class Morphisms - just replace the processor with the function, and use the appropriate function instance.
 
-[[ Category Processor ]] = Category [[ Processor ]] = Category (a -> b)
+[[ Category IOProcessor ]] = Category [[ IOProcessor ]] = Category (a -> b)
         [[ p1 . p2 ]] = [[ p1 ]] . [[ p2 ]]
         [[ id ]] = id
 
-[[ Functor (Processor a) ]] = Functor [[ Processor a ]] = ...
+[[ Functor (IOProcessor a) ]] = Functor [[ IOProcessor a ]] = ...
         [[ fmap f p ]] = fmap f [[ p ]]
                        = f . [[ p ]]
 
-[[ Applicative (Processor a) ]] = Applicative [[ Processor a ]] = ...
+[[ Applicative (IOProcessor a) ]] = Applicative [[ IOProcessor a ]] = ...
         [[ pure ]] = pure 
                    = const
 
 Arrow: etc...
+
+Laws that IOProcessor a b must satisfy
+......................................
+TODO (ptrs, etc.)
+
 
 ImageProcessor - Examples
 -------------------------
