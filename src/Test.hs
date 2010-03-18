@@ -20,10 +20,10 @@ edges :: ImageProcessor
 edges = canny 30 190 3
 
 faceDetect :: Processor.IOProcessor PImage [CvRect]
-faceDetect = haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml" 1.2 3 CV.cvHaarDoCannyPruning (CvSize 50 50)
+faceDetect = haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml" 1.1 3 CV.cvHaarFlagNone (CvSize 50 50)
   
 captureDev :: ImageSource
-captureDev = videoFile "/tmp/video.avi"
+captureDev = videoFile "/tmp/video.flv"
 -- If you have a webcam, uncomment this, and comment the other definition.
 --captureDev = camera 0
 

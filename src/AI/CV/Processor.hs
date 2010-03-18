@@ -14,17 +14,20 @@
 -- Motivating example: bindings to C libraries that use functions such as: f(foo *src, foo *dst),
 -- where the pointer `dst` must be pre-allocated. In this case we normally do:
 --
---   foo *dst = allocateFoo();
---   ... 
---   while (something) {
---      f(src, dst);
---      ...
---   }
---   releaseFoo(dst);
+--   > foo *dst = allocateFoo();
+--   > ... 
+--   > while (something) {
+--   >    f(src, dst);
+--   >    ...
+--   > }
+--   > releaseFoo(dst);
 --
 -- You can use the 'runUntil' function below to emulate that loop.
 --
 -- Processor is an instance of Category, Functor, Applicative and Arrow. 
+--
+-- In addition to the general type @'Processor' m a b@, this module also defines the semantic model
+-- for @'Processor' IO a b@, which has synonym @'IOProcessor' a b@.
 
 module AI.CV.Processor where
 
@@ -38,16 +41,9 @@ import Control.Monad(liftM, join)
 
 -- | The type of Processors
 --
--- The semantic model is: 
---
--- > [[ IOProcessor a b ]] = a -> b
---
--- The idea is that a and b can be (and are usually?) pointers.
--- It is meant for functions that require a pre-allocated output pointer to operate.
--- 
 --    * a, b = the input and output types of the processor (think a -> b)
 --
---    * x = type of internal state
+--    * x = type of internal state (existentially quantified)
 --
 -- The arguments to the constructor are:
 --
@@ -62,8 +58,46 @@ import Control.Monad(liftM, join)
 data Processor m a b where
     Processor :: Monad m => (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ()) -> (Processor m a b)
     
+-- | The semantic model for 'IOProcessor' is a function:
+--
+-- > [[ 'IOProcessor' a b ]] = a -> b
+--
+-- And the following laws:
+--
+--    1. The processing function (@a -> x -> m x@) must act as if purely, so that indeed for a given input the
+--       output is always the same. One particular thing to be careful with is that the output does not depend
+--       on time (for example, you shouldn't use IOProcessor to implement an input device). The @IOSource@ type
+--       is defined exactly for time-dependent processors. For pointer typed inputs and outputs, see next law.
+--
+--    2. For processors that work on pointers, @[[ Ptr t ]] = t@. This is guaranteed by the following
+--       implementation constraints for @IOProcessor a b@:
+--
+--       1. If `a` is a pointer type (@a = Ptr p@), then the processor must NOT write (modify) the referenced data.
+--
+--       2. If `b` is a pointer, the memory it points to (and its allocation status) is only allowed to change
+--          by the processor that created it (in the processing and releasing functions). In a way this
+--          generalizes the first constraint.
+--
 type IOProcessor a b = Processor IO a b
 
+-- | @'IOSource' a b@ is the type of time-dependent processors, such that:
+--
+-- > [[ 'IOSource' a b ]] = (a, Time) -> b
+--
+-- Thus, it is ok to implement a processing action that outputs arbitrary time-dependent values during runtime
+-- regardless of input. (Although the more useful case is to calculate something from the input @a@ that is
+-- also time-dependent. The @a@ input is often not required and in those cases @a = ()@ is used.
+--
+-- Notice that this means that IOSource doesn't qualify as an 'IOProcessor'. However, currently the
+-- implementation /does NOT/ enforce this, i.e. IOSource is not a newtype; I don't know how to implement it
+-- correctly. Also, one question is whether primitives like "chain" will have to disallow placing 'IOSource'
+-- as the second element in a chain. Maybe they should, maybe they shouldn't.
+type IOSource a b = Processor IO a b
+
+-- | TODO: What's the semantic model for @'IOSink' a@?
+type IOSink a = IOProcessor a ()
+
+-- | TODO: do we need this? we're exporting the data constructor anyway for now, so maybe we don't.
 processor :: Monad m =>
              (a -> x -> m x) -> (a -> m x) -> (x -> m b) -> (x -> m ())
           -> Processor m a b
@@ -256,3 +290,34 @@ runWith f (Processor pf af cf rf) a = do
         rf x
         return b'
 
+
+-------------------------------------------------------------
+type DTime = Double
+
+type Clock = IO Double
+
+-- | scanlT provides the primitive for performing memory-full operations on time-dependent processors, as described in <http://www.ee.bgu.ac.il/~noamle/_downloads/gaccum.pdf>.
+--
+-- /Untested/.
+scanlT :: Clock -> (b -> b -> DTime -> c -> c) -> c -> IOSource a b -> IOSource a c
+scanlT clock transFunc initOut (Processor pf af cf rf) = processor procFunc allocFunc convFunc releaseFunc
+    where procFunc curIn' (prevIn, prevTime, prevOut, x) = do
+            x' <- pf curIn' x
+            curIn <- cf x'
+            curTime <- clock
+            let dtime = curTime - prevTime
+                curOut = transFunc prevIn curIn dtime prevOut
+            return (curIn, curTime, curOut, x')
+          
+          allocFunc firstIn' = do
+            x <- af firstIn'
+            firstIn <- cf x
+            curTime <- clock
+            return (firstIn, curTime, initOut, x)
+          
+          convFunc (_, _, curOut, _) = return curOut
+          
+          releaseFunc (_, _, _, x') = rf x'
+          
+          
+  
