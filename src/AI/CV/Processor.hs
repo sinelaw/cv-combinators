@@ -294,12 +294,12 @@ runWith f (Processor pf af cf rf) a = do
 -------------------------------------------------------------
 type DTime = Double
 
-type Clock = IO Double
+type Clock m = m Double
 
 -- | scanlT provides the primitive for performing memory-full operations on time-dependent processors, as described in <http://www.ee.bgu.ac.il/~noamle/_downloads/gaccum.pdf>.
 --
 -- /Untested/.
-scanlT :: Clock -> (b -> b -> DTime -> c -> c) -> c -> IOSource a b -> IOSource a c
+scanlT :: Clock IO -> (b -> b -> DTime -> c -> c) -> c -> IOSource a b -> IOSource a c
 scanlT clock transFunc initOut (Processor pf af cf rf) = processor procFunc allocFunc convFunc releaseFunc
     where procFunc curIn' (prevIn, prevTime, prevOut, x) = do
             x' <- pf curIn' x
@@ -320,4 +320,20 @@ scanlT clock transFunc initOut (Processor pf af cf rf) = processor procFunc allo
           releaseFunc (_, _, _, x') = rf x'
           
           
-  
+-- | Differentiate using scanlT. TODO: test, and also generalize for any monad (trivial change of types).
+differentiate :: (Real b) => Clock IO -> IOSource a b -> IOSource a Double
+differentiate clock = scanlT clock diffFunc 0
+    where diffFunc y' y dt _ = (realToFrac (y' - y)) / dt -- horrible approximation!
+          
+integrate :: (Real b) => Clock IO -> IOSource a b -> IOSource a Double
+integrate clock p = scanlT clock intFunc 0 p
+    where intFunc y' y dt prevSum = prevSum + (realToFrac (y' + y)) * dt / 2 -- horrible approximation!
+
+max_ :: Ord b => Clock IO -> b -> IOSource a b -> IOSource a b
+max_ clock minVal = scanlT clock maxFunc minVal
+    where maxFunc y' y _ _ = max y' y
+          
+min_ :: Ord b => Clock IO -> b -> IOSource a b -> IOSource a b
+min_ clock maxVal = scanlT clock minFunc maxVal
+    where minFunc y' y _ _ = min y' y
+
