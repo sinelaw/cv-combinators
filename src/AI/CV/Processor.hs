@@ -78,6 +78,11 @@ data Processor m a b where
 --          by the processor that created it (in the processing and releasing functions). In a way this
 --          generalizes the first constraint.
 --
+-- Note, that unlike "Yampa", this model does not allow transformations of the type @(Time -> a) -> (Time ->
+-- b)@. The reason is that I want to prevent arbitrary time access (whether causal or not). This limitation
+-- means that everything is essentially "point-wise" in time. To allow memory-full operations under this
+-- model, 'scanlT' is defined. See <http://www.ee.bgu.ac.il/~noamle/_downloads/gaccum.pdf> for more about
+-- arbitrary time access.
 type IOProcessor a b = Processor IO a b
 
 -- | @'IOSource' a b@ is the type of time-dependent processors, such that:
