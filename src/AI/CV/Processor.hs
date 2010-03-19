@@ -190,7 +190,7 @@ forkJoin (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3
 -- | The identity processor: output = input. Semantically, [[ empty ]] = id
 empty :: Monad m => Processor m a a
 empty = processor pf af cf rf
-    where pf _ = do return
+    where pf a _ = do return a
           af   = do return
           cf   = do return
           rf _ = do return ()

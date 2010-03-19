@@ -45,6 +45,8 @@ test1 = resizer . camera
 
 TODO:
 -----
+* Hide all impure stuff from the ImageProcessor API, by not exporting it.
+
 * Copying images, such as for the drawRects processor, is redundant in many cases because the input
   image is an allocated output image of the previous processor, and if nobody else uses this as input
   there's no reason to not draw "on the image" itself, no need to copy.
@@ -93,3 +95,5 @@ TODO:
   "drawing rects:"
   [CvRect {rectX = 153, rectY = 118, rectWidth = 157, rectHeight = 157}]
   ()
+
+* Consider using rewrite ruels to share allocations?

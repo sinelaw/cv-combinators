@@ -24,11 +24,31 @@
 --
 -- The last expression is a processor that captures frames from camera and displays edge-detected version in the window.
 --------------------------------------------------------------
-module AI.CV.ImageProcessors where
+module AI.CV.ImageProcessors 
+    (ImageSink, 
+     ImageSource, 
+     ImageProcessor, 
+     Image, 
+     
+     camera,
+     videoFile,
+
+     window,
+
+     resize,
+     dilate,
+     canny,
+
+     haarDetect,
+
+     drawRects,
+
+     runTill, runTillKeyPressed, keyPressed) where
 
 
 import AI.CV.Processor
 
+import AI.CV.OpenCV.Types(PImage)
 import qualified AI.CV.OpenCV.CV as CV
 import qualified AI.CV.OpenCV.CxCore as CxCore
 import qualified AI.CV.OpenCV.HighGui as HighGui
@@ -37,9 +57,12 @@ import AI.CV.OpenCV.CV(CvHaarClassifierCascade)
 
 import Foreign.Ptr
 
-type ImageSink      = IOSink      (Ptr IplImage) 
-type ImageSource    = IOSource    ()             (Ptr IplImage)
-type ImageProcessor = IOProcessor (Ptr IplImage) (Ptr IplImage)
+
+type Image = PImage
+
+type ImageSink      = IOSink      Image
+type ImageSource    = IOSource    ()     Image
+type ImageProcessor = IOProcessor Image  Image
 
 
 
@@ -98,15 +121,15 @@ videoFile fileName = capture (HighGui.cvCreateFileCapture fileName)
 -- Note: windows with the same index will be the same window....is this ok?
 window :: Int -> ImageSink
 window num = processor procFunc allocFunc (do return) (do return)
-    where procFunc :: (Ptr IplImage -> () -> IO ())
+    where procFunc :: (Image -> () -> IO ())
           procFunc src x = (HighGui.showImage (fromIntegral num) src) >> (return x)
           
-          allocFunc :: (Ptr IplImage -> IO ())
+          allocFunc :: (Image -> IO ())
           allocFunc _ = HighGui.newWindow (fromIntegral num) True
 
 ------------------------------------------------------------------
 -- | A convenience function for constructing a common type of processors that work exclusively on images
-imageProcessor :: (Ptr IplImage -> Ptr IplImage -> IO (Ptr IplImage)) -> (Ptr IplImage -> IO (Ptr IplImage)) 
+imageProcessor :: (Image -> Image -> IO Image) -> (Image -> IO Image) 
                -> ImageProcessor
 imageProcessor procFunc allocFunc = processor procFunc allocFunc (do return) (CxCore.cvReleaseImage)
 
@@ -163,16 +186,16 @@ haarDetect :: String  -- ^ Cascade filename (OpenCV comes with several, includin
            -> Int     -- ^ min neighbors
            -> CV.HaarDetectFlag -- ^ flags
            -> CvSize  -- ^ min size
-           -> IOProcessor (Ptr IplImage) [CvRect]
+           -> IOProcessor Image [CvRect]
 haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc 
-    where procFunc :: (Ptr IplImage) -> ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage)) 
+    where procFunc :: Image -> ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage)) 
                    -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
           procFunc image (_, x@(cascade, storage)) = do
             seqP <- CV.cvHaarDetectObjects image cascade storage (realToFrac scaleFactor) (fromIntegral minNeighbors) flags minSize
             recs <- CxCore.seqToList seqP
             return (recs, x)
             
-          allocFunc :: Ptr IplImage -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
+          allocFunc :: Image -> IO ([CvRect], (Ptr CvHaarClassifierCascade, Ptr CvMemStorage))
           allocFunc _ = do
             storage <- CxCore.cvCreateMemStorage 0
             (cascade, name) <- CxCore.cvLoad cascadeFileName storage Nothing
@@ -192,7 +215,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
 -- need a datatype that combines the shape types for that.
             
 -- | OpenCV's cvRectangle, currently without width, color or line type control
-drawRects :: IOProcessor (Ptr IplImage, [CvRect]) (Ptr IplImage)
+drawRects :: IOProcessor (Image, [CvRect]) Image
 drawRects = processor procFunc (CxCore.cvCloneImage . fst) (do return) CxCore.cvReleaseImage
     where procFunc (src,rects) dst = do
             CxCore.cvCopy src dst
