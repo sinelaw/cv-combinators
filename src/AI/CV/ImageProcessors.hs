@@ -20,7 +20,9 @@
 -- > cam = camera 0        -- Autodetect camera
 -- > edge = canny 30 190 3 -- Edge detecting processor using canny operator
 -- >
--- > test = win . edge . cam   -- A processor that captures frames from camera and displays edge-detected version in the window.
+-- > test = cam >>> edge >>> win   
+--
+-- The last expression is a processor that captures frames from camera and displays edge-detected version in the window.
 --------------------------------------------------------------
 module AI.CV.ImageProcessors where
 
@@ -35,8 +37,8 @@ import AI.CV.OpenCV.CV(CvHaarClassifierCascade)
 
 import Foreign.Ptr
 
-type ImageSink      = IOProcessor (Ptr IplImage) ()
-type ImageSource    = IOProcessor ()             (Ptr IplImage)
+type ImageSink      = IOSink      (Ptr IplImage) 
+type ImageSource    = IOSource    ()             (Ptr IplImage)
 type ImageProcessor = IOProcessor (Ptr IplImage) (Ptr IplImage)
 
 

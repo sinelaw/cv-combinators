@@ -20,15 +20,17 @@ edges :: ImageProcessor
 edges = canny 30 190 3
 
 faceDetect :: Processor.IOProcessor PImage [CvRect]
-faceDetect = haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml" 1.1 3 CV.cvHaarFlagNone (CvSize 50 50)
+faceDetect = haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_alt.xml" 1.1 3 CV.cvHaarFlagNone (CvSize 20 20)
   
 captureDev :: ImageSource
-captureDev = videoFile "/tmp/video.flv"
+captureDev = videoFile "/tmp/video.flv" -- Many formats are supported, not just flv (FFMPEG-based, normally).
+
 -- If you have a webcam, uncomment this, and comment the other definition.
---captureDev = camera 0
+-- captureDev = camera 0
 
 main :: IO ()
-main = runTillKeyPressed (captureDev --< (second faceDetect) >>> drawRects >>> window 0) 
+main = runTillKeyPressed (captureDev >>> resizer --< (faces *** edges) >>> (window 0 *** window 1))
+    where faces = (id &&& faceDetect) >>> drawRects
             
 -- Shows the camera output in two windows (same images in both).
 --main = runTillKeyPressed ((camera 0) --< (window 0 *** window 1))
