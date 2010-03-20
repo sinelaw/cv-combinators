@@ -23,7 +23,7 @@ type DrawRenderer a = IOSink (Draw.Image a)
 ------------------------------------------------------------------
 -- | A window that displays images.
 sdlWindow :: Int -> Int -> DrawRenderer a
-sdlWindow width height = processor procFunc allocFunc (do return) (do return)
+sdlWindow width height = processor procFunc allocFunc return return
     where procFunc :: (Draw.Image a -> () -> IO ())
           procFunc image _ = do
             Draw.clearRender image >> SDL.glSwapBuffers

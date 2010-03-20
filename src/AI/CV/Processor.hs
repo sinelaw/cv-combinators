@@ -123,9 +123,7 @@ chain (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3 af
             x2 <- af2 b'
             return (x1,x2)
             
-          cf3 (_,x2) = do
-            b <- cf2 x2
-            return b
+          cf3 (_,x2) = cf2 x2
             
           rf3 (x1,x2) = do
             rf2 x2
@@ -190,10 +188,10 @@ forkJoin (Processor pf1 af1 cf1 rf1) (Processor pf2 af2 cf2 rf2) = processor pf3
 -- | The identity processor: output = input. Semantically, [[ empty ]] = id
 empty :: Monad m => Processor m a a
 empty = processor pf af cf rf
-    where pf a _ = do return a
-          af   = do return
-          cf   = do return
-          rf _ = do return ()
+    where pf a _ = return a
+          af   = return
+          cf   = return
+          rf _ = return ()
                
 instance Monad m => Category (Processor m) where
   (.) = flip chain
@@ -212,10 +210,10 @@ instance Monad m => Applicative (Processor m a) where
   -- | 
   -- > [[ pure ]] = const
   pure b = processor pf af cf rf
-    where pf _ = do return
-          af _ = do return ()
-          cf _ = do return b
-          rf _ = do return ()
+    where pf _ = return
+          af _ = return ()
+          cf _ = return b
+          rf _ = return ()
             
   -- |
   -- [[ pf <*> px ]] = \a -> ([[ pf ]] a) ([[ px ]] a)
@@ -328,11 +326,11 @@ scanlT clock transFunc initOut (Processor pf af cf rf) = processor procFunc allo
 -- | Differentiate using scanlT. TODO: test, and also generalize for any monad (trivial change of types).
 differentiate :: (Real b) => Clock IO -> IOSource a b -> IOSource a Double
 differentiate clock = scanlT clock diffFunc 0
-    where diffFunc y' y dt _ = (realToFrac (y' - y)) / dt -- horrible approximation!
+    where diffFunc y' y dt _ = realToFrac (y' - y) / dt -- horrible approximation!
           
 integrate :: (Real b) => Clock IO -> IOSource a b -> IOSource a Double
 integrate clock p = scanlT clock intFunc 0 p
-    where intFunc y' y dt prevSum = prevSum + (realToFrac (y' + y)) * dt / 2 -- horrible approximation!
+    where intFunc y' y dt prevSum = prevSum + realToFrac (y' + y) * dt / 2 -- horrible approximation!
 
 max_ :: Ord b => Clock IO -> b -> IOSource a b -> IOSource a b
 max_ clock minVal = scanlT clock maxFunc minVal

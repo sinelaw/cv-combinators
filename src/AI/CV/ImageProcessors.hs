@@ -71,8 +71,7 @@ type ImageProcessor = IOProcessor Image  Image
 
 -- | Predicate for pressed keys
 keyPressed :: Show a => a -> IO Bool
-keyPressed _ = do
-  fmap (/= -1) $ HighGui.waitKey 3 -- todo wrap waitKey more generally for the API
+keyPressed _ = fmap (/= -1) $ HighGui.waitKey 3 -- todo wrap waitKey more generally for the API
 
 -- | Runs the processor until a predicate is true, for predicates, and processors that take () as input
 -- (such as chains that start with a camera).
@@ -81,7 +80,7 @@ runTill = flip runUntil ()
 
 -- | Name (and type) says it all.
 runTillKeyPressed :: (Show a) => IOProcessor () a -> IO ()
-runTillKeyPressed f = (f `runTill` keyPressed) >> (return ())
+runTillKeyPressed f = f `runTill` keyPressed >> (return ())
 
 ------------------------------------------------------------------
 capture :: IO (Ptr HighGui.CvCapture) -> ImageSource
@@ -89,7 +88,7 @@ capture pCap = processor processQueryFrame allocateCamera fromState releaseNext
     where processQueryFrame :: () -> (Ptr CxCore.IplImage, Ptr HighGui.CvCapture) 
                                -> IO (Ptr CxCore.IplImage, Ptr HighGui.CvCapture)
           processQueryFrame _ (_, cap) = do
-            newFrame <- HighGui.cvQueryFrame $ cap
+            newFrame <- HighGui.cvQueryFrame cap
             return (newFrame, cap)
           
           allocateCamera :: () -> IO (Ptr CxCore.IplImage, Ptr HighGui.CvCapture)
@@ -98,11 +97,9 @@ capture pCap = processor processQueryFrame allocateCamera fromState releaseNext
             newFrame <- HighGui.cvQueryFrame cap
             return (newFrame, cap)
           
-          fromState (image, _) = do 
-            return image
+          fromState (image, _) = return image
           
-          releaseNext (_, cap) = do
-            HighGui.cvReleaseCapture $ cap
+          releaseNext (_, cap) = HighGui.cvReleaseCapture cap
 
 
 -- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
@@ -120,9 +117,9 @@ videoFile fileName = capture (HighGui.cvCreateFileCapture fileName)
 -- | A window that displays images.
 -- Note: windows with the same index will be the same window....is this ok?
 window :: Int -> ImageSink
-window num = processor procFunc allocFunc (do return) (do return)
+window num = processor procFunc allocFunc return return
     where procFunc :: (Image -> () -> IO ())
-          procFunc src x = (HighGui.showImage (fromIntegral num) src) >> (return x)
+          procFunc src x = HighGui.showImage (fromIntegral num) src >> return x
           
           allocFunc :: (Image -> IO ())
           allocFunc _ = HighGui.newWindow (fromIntegral num) True
@@ -131,7 +128,7 @@ window num = processor procFunc allocFunc (do return) (do return)
 -- | A convenience function for constructing a common type of processors that work exclusively on images
 imageProcessor :: (Image -> Image -> IO Image) -> (Image -> IO Image) 
                -> ImageProcessor
-imageProcessor procFunc allocFunc = processor procFunc allocFunc (do return) (CxCore.cvReleaseImage)
+imageProcessor procFunc allocFunc = processor procFunc allocFunc return CxCore.cvReleaseImage
 
 -- | OpenCV's cvResize
 resize :: Int -- Width
@@ -172,7 +169,7 @@ canny thres1 thres2 size = processor processCanny allocateCanny convertState rel
             gray <- CxCore.cvCreateImage (CxCore.cvGetSize src) 1 CxCore.iplDepth8u
             return (gray, target)
             
-          convertState = do return . snd
+          convertState = return . snd
                             
           releaseState (gray, target) = do
             CxCore.cvReleaseImage gray
@@ -202,7 +199,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             print name -- todo verify that this is a haar cascade
             return ([], (cascade, storage))
           
-          convFunc = do return . fst
+          convFunc = return . fst
           
           freeFunc (_, (_, storage)) = do
             CxCore.cvReleaseMemStorage storage
@@ -216,7 +213,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             
 -- | OpenCV's cvRectangle, currently without width, color or line type control
 drawRects :: IOProcessor (Image, [CvRect]) Image
-drawRects = processor procFunc (CxCore.cvCloneImage . fst) (do return) CxCore.cvReleaseImage
+drawRects = processor procFunc (CxCore.cvCloneImage . fst) return CxCore.cvReleaseImage
     where procFunc (src,rects) dst = do
             CxCore.cvCopy src dst
             mapM_ (CxCore.cvRectangle dst) rects
