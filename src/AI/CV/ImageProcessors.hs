@@ -72,7 +72,7 @@ type ImageProcessor = IOProcessor Image  Image
 -- | Predicate for pressed keys
 keyPressed :: Show a => a -> IO Bool
 keyPressed _ = do
-  fmap (/= -1) $ HighGui.waitKey 3
+  fmap (/= -1) $ HighGui.waitKey 3 -- todo wrap waitKey more generally for the API
 
 -- | Runs the processor until a predicate is true, for predicates, and processors that take () as input
 -- (such as chains that start with a camera).

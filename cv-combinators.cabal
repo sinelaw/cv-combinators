@@ -1,5 +1,5 @@
 name: cv-combinators
-version: 0.1.2
+version: 0.1.2.1
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
@@ -35,6 +35,13 @@ executable test-cv-combinators
   Ghc-Prof-Options:  -prof -auto-all 
   other-modules: AI.CV.Processor, AI.CV.ImageProcessors
 
+executable test-cv-combinators2
+  hs-source-dirs:  src
+  Build-Depends: base >= 4, SDL, graphics-drawingcombinators
+  main-is: IntegratedTest.hs
+  Ghc-Options: -Wall 
+  Ghc-Prof-Options:  -prof -auto-all 
+  other-modules: AI.CV.Processor, AI.CV.ImageProcessors Graphics.GraphicsProcessors
 
 -- source-repository head
 --  type: git
