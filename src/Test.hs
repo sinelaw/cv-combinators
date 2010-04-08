@@ -4,8 +4,8 @@ module Main where
 import AI.CV.ImageProcessors
 
 import qualified AI.CV.OpenCV.CV as CV
-import qualified AI.CV.Processor as Processor
-import AI.CV.Processor((--<))
+import qualified Control.Processor as Processor
+import Control.Processor((--<))
 import AI.CV.OpenCV.Types
 import AI.CV.OpenCV.CxCore(CvRect(..), CvSize(..))
 

@@ -1,5 +1,5 @@
 name: cv-combinators
-version: 0.1.2.1
+version: 0.1.2.2
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
@@ -8,7 +8,7 @@ synopsis: Functional Combinators for Computer Vision
 description:
    Initial version; using the "HOpenCV" package as a backend.
    .
-   Provides a functional combinator library, naturally expressed as Arrow instances (but also Category, Functor and Applicative). 
+   Provides a functional combinator library for computer vision, based on the "allocated-processor" package.
    .
    Online documentation, if not built below, can be found at <http://www.ee.bgu.ac.il/~noamle/>.
    .
@@ -21,27 +21,26 @@ cabal-version:  >= 1.2
 Tested-With:   GHC == 6.10.4
 
 library
-   exposed-modules: AI.CV.Processor,
-                    AI.CV.ImageProcessors
+   exposed-modules: AI.CV.ImageProcessors
    hs-Source-Dirs: src
-   build-depends: base >= 3 && < 5, HOpenCV >= 0.1.2
+   build-depends: base >= 4, HOpenCV >= 0.1.2, allocated-processor
    ghc-options: -Wall
 
 executable test-cv-combinators
   hs-source-dirs:  src
-  Build-Depends: base >= 4
+  Build-Depends: base >= 4, HOpenCV >= 0.1.2, allocated-processor
   main-is: Test.hs
   Ghc-Options: -Wall 
   Ghc-Prof-Options:  -prof -auto-all 
-  other-modules: AI.CV.Processor, AI.CV.ImageProcessors
+  other-modules: AI.CV.ImageProcessors
 
 executable test-cv-combinators2
   hs-source-dirs:  src
-  Build-Depends: base >= 4, SDL, graphics-drawingcombinators
+  Build-Depends: base >= 4, HOpenCV >= 0.1.2, allocated-processor, SDL, graphics-drawingcombinators
   main-is: IntegratedTest.hs
   Ghc-Options: -Wall 
   Ghc-Prof-Options:  -prof -auto-all 
-  other-modules: AI.CV.Processor, AI.CV.ImageProcessors Graphics.GraphicsProcessors
+  other-modules: AI.CV.ImageProcessors, Graphics.GraphicsProcessors
 
 -- source-repository head
 --  type: git

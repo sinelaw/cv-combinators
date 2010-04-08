@@ -13,7 +13,7 @@
 module Graphics.GraphicsProcessors where
 
 
-import AI.CV.Processor
+import Control.Processor
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.SDL as SDL
 
