@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Main where
 
 
@@ -9,13 +11,14 @@ import qualified Graphics.GraphicsProcessors as GP
 
 import qualified AI.CV.OpenCV.CV as CV
 import qualified Control.Processor as Processor
-import Control.Processor(DTime, DClock, scanlT, IOSource)
+import Control.Processor(DTime, DClock, scanlT, IOSource, IOProcessor)
 import AI.CV.OpenCV.CxCore(CvRect(..), CvSize(..))
+
+import Data.VectorSpace((*^), zeroV, (^+^), Scalar, VectorSpace)
 
 import Prelude hiding ((.),id)
 import Control.Arrow
 import Control.Category
-import Control.Applicative
 import Data.Monoid
 
 resX, resY :: Num a => a
@@ -25,7 +28,7 @@ resY = 120
 resizer :: IP.ImageProcessor
 resizer = IP.resize resX resY CV.CV_INTER_LINEAR
 
-faceDetect :: Processor.IOProcessor IP.Image [CvRect]
+faceDetect :: IOProcessor IP.Image [CvRect]
 faceDetect = IP.haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_alt.xml" 1.1 3 CV.cvHaarFlagNone (CvSize 20 20)
   
 captureDev :: IP.ImageSource
@@ -54,20 +57,21 @@ drawCvRect (CvRect x y w h) = tr %% Draw.tint (Draw.Color 0 1 0 0.5) square
 clock :: IO Double -- = DClock Double
 clock = return 1 -- todo implement really in some module that wraps SDL, GLUT or whatever.
 
---movingAverage :: Int -> ([(DTime, a)] -> b) -> a -> b -> IOSource a b -> IOSource a b
+-- todo: ins't this just an n-step past memory? generalize a bit and move to Processor package?
+movingAverage :: Int -> ([(DTime, b)] -> c) -> (DTime, b) -> c -> IOSource a b -> IOProcessor a c
 movingAverage n f initA initB p = (scanlT clock f' (take n . repeat $ initA, initB) p) >>> arr snd
-    where f' y1 y2 dt (lastNSamps, prevRes) = (nextSamps, f nextSamps )
+    where f' _ y2 dt (lastNSamps, _) = (nextSamps, f nextSamps )
               where nextSamps = (dt, y2) : (tail lastNSamps)
 
---avgCvRects :: [Double] -> [(DTime, CvRect)] -> CvRect
-avgCvRects weights samps = map (multCvRect (1/n)) . foldr sumCvRect (CvRect 0 0 0 0) $ zipWith multCvRect weights (map snd samps)
-    where multCvRect a (CvRect x y w h) = CvRect (a*x) (a*y) (a*w) (a*h)
-          sumCvRect (CvRect x1 y1 w1 h1) (CvRect x2 y2 w2 h2) = CvRect (x1+x2) (y1+y2) (w1+w2) (h1+h2)
-          n = fromIntegral (length weights)
+-- todo: this is a general function, perhaps move to a module?
+averageV :: (Fractional (Scalar a), VectorSpace a) => [Scalar a] -> [a] -> a
+averageV weights samps = ((1/n) *^) . foldr (^+^) zeroV $ zipWith (*^) weights samps
+    where n = fromIntegral (length weights)
           
   
---movingCvRectAverage :: [Double] -> IOSource a [(CvRect)] -> IOSource a CvRect
-movingCvRectAverage weights pIn = movingAverage (length weights) (avgCvRects weights) (0, CvRect 0 0 0 0) (CvRect 0 0 0 0) pIn'
+-- todo: this is a general function, perhaps move to Processor package?
+movingCvRectAverage :: (Fractional (Scalar v), VectorSpace v) => [Scalar v] -> IOProcessor a [v] -> IOProcessor a v
+movingCvRectAverage weights pIn = movingAverage (length weights) (averageV weights . map snd) (0, zeroV) zeroV pIn'
     where pIn' = pIn >>> arr head -- this will crash!!! fix (need to do complicated stuff here, sometimes list is empty, so we need som sort of memory?
 
 main :: IO ()
