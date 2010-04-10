@@ -9,7 +9,7 @@ Processor Module - Semantic Design
 
 The Processor type is parameterized over monads, and does not have a semantic model (currently). The model is given for IOProcessor, which is essentially a Processor on the IO monad.
 
-The meaning of an IOProcessor is given by:
+The meaning of an IOProcessor, if the value is instantiated according to the rules, is given by:
 
 [[ IOProcessor a b ]] = a -> b
 

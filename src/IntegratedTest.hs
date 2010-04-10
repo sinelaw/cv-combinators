@@ -72,7 +72,9 @@ averageV weights samps = ((1/n) *^) . foldr (^+^) zeroV $ zipWith (*^) weights s
 -- todo: this is a general function, perhaps move to Processor package?
 movingCvRectAverage :: (Fractional (Scalar v), VectorSpace v) => [Scalar v] -> IOProcessor a [v] -> IOProcessor a v
 movingCvRectAverage weights pIn = movingAverage (length weights) (averageV weights . map snd) (0, zeroV) zeroV pIn'
-    where pIn' = pIn >>> arr head -- this will crash!!! fix (need to do complicated stuff here, sometimes list is empty, so we need som sort of memory?
+    where pIn' = pIn >>> arr headOrZero
+          headOrZero [] = zeroV
+          headOrZero xs = head xs
 
 main :: IO ()
 main = Processor.runUntil (captureDev >>> resizer >>> avgRect faceDetect >>> arr drawCvRect >>> sdlWindow) () (const . return $ False)

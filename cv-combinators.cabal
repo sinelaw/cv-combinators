@@ -23,12 +23,12 @@ Tested-With:   GHC == 6.10.4
 library
    exposed-modules: AI.CV.ImageProcessors
    hs-Source-Dirs: src
-   build-depends: base >= 4, HOpenCV >= 0.1.2.1, allocated-processor, vector-space
+   build-depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor, vector-space
    ghc-options: -Wall
 
 executable test-cv-combinators
   hs-source-dirs:  src
-  Build-Depends: base >= 4, HOpenCV >= 0.1.2.1, allocated-processor, vector-space
+  Build-Depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor, vector-space
   main-is: Test.hs
   Ghc-Options: -Wall 
   Ghc-Prof-Options:  -prof -auto-all 
@@ -36,7 +36,7 @@ executable test-cv-combinators
 
 executable test-cv-combinators2
   hs-source-dirs:  src
-  Build-Depends: base >= 4, HOpenCV >= 0.1.2.1, allocated-processor, SDL, graphics-drawingcombinators, vector-space
+  Build-Depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor, SDL, graphics-drawingcombinators, vector-space
   main-is: IntegratedTest.hs
   Ghc-Options: -Wall 
   Ghc-Prof-Options:  -prof -auto-all 
