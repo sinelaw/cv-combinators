@@ -11,7 +11,7 @@ import qualified Graphics.GraphicsProcessors as GP
 
 import qualified AI.CV.OpenCV.CV as CV
 import qualified Control.Processor as Processor
-import Control.Processor(DTime, DClock, scanlT, IOSource, IOProcessor)
+import Control.Processor(scanlT, IOSource, IOProcessor, fir, trace, headOrLast)
 import AI.CV.OpenCV.CxCore(CvRect(..), CvSize(..))
 
 import Data.VectorSpace((*^), zeroV, (^+^), Scalar, VectorSpace)
@@ -53,31 +53,16 @@ drawCvRect (CvRect x y w h) = tr %% Draw.tint (Draw.Color 0 1 0 0.5) square
 --drawRects = arr (mconcat . drawCvRects) --fmap (mconcat . map drawCvRect) id
 --    where drawCvRects = map drawCvRect
 
+type DTime = Double
 
-clock :: IO Double -- = DClock Double
+clock :: IO DTime -- = DClock Double
 clock = return 1 -- todo implement really in some module that wraps SDL, GLUT or whatever.
 
--- todo: 1. works only for discrete time
---       2. isn't this just an n-step past memory? generalize a bit and move to Processor package?
-nStepsMemory :: Int -> ([(DTime, b)] -> c) -> (DTime, b) -> c -> IOSource a b -> IOProcessor a c
-nStepsMemory n f initA initB p = (scanlT clock f' (take n . repeat $ initA, initB) p) >>> arr snd
-    where f' _ y2 dt (lastNSamps, _) = (nextSamps, f nextSamps )
-              where nextSamps = (dt, y2) : (tail lastNSamps)
-
--- todo: this is a general function, perhaps move to a module?
-averageV :: (Fractional (Scalar a), VectorSpace a) => [Scalar a] -> [a] -> a
-averageV weights samps = ((1/n) *^) . foldr (^+^) zeroV $ zipWith (*^) weights samps
-    where n = fromIntegral (length weights)
-          
-  
--- todo: this is a general function, perhaps move to Processor package?
-movingAverage :: (Fractional (Scalar v), VectorSpace v) => [Scalar v] -> IOProcessor a [v] -> IOProcessor a v
-movingAverage weights pIn = nStepsMemory (length weights) (averageV weights . map snd) (0, zeroV) zeroV pIn'
-    where pIn' = pIn >>> arr headOrZero
-          headOrZero [] = zeroV -- todo: headOrZero should pick the element closest to the latest average?
-          headOrZero xs = head xs
 
 main :: IO ()
-main = Processor.runUntil (captureDev >>> resizer >>> averageFace >>> arr drawCvRect >>> sdlWindow) () (const . return $ False)
-    where averageFace = movingAverage [2,1,1,0] faceDetect
-          sdlWindow = GP.sdlWindow resX resY  
+--main = Processor.runUntil (captureDev >>> resizer >>> averageFace >>> arr drawCvRect >>> sdlWindow) () (const . return $ False)
+main = IP.runTillKeyPressed (captureDev >>> resizer >>> (id &&& averageFace) >>> (second (arr return)) >>> IP.drawRects >>> IP.window 0)
+    where averageFace = fir [0.25,0.25,0.25,0.25] 1 clock (headOrLast zeroV clock faceDetect >>> trace)
+          --sdlWindow = GP.sdlWindow resX resY  
+          headOrZero [] = zeroV
+          headOrZero (v:vs) = v
