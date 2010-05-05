@@ -57,9 +57,10 @@ drawCvRect (CvRect x y w h) = tr %% Draw.tint (Draw.Color 0 1 0 0.5) square
 clock :: IO Double -- = DClock Double
 clock = return 1 -- todo implement really in some module that wraps SDL, GLUT or whatever.
 
--- todo: ins't this just an n-step past memory? generalize a bit and move to Processor package?
-movingAverage :: Int -> ([(DTime, b)] -> c) -> (DTime, b) -> c -> IOSource a b -> IOProcessor a c
-movingAverage n f initA initB p = (scanlT clock f' (take n . repeat $ initA, initB) p) >>> arr snd
+-- todo: 1. works only for discrete time
+--       2. isn't this just an n-step past memory? generalize a bit and move to Processor package?
+nStepsMemory :: Int -> ([(DTime, b)] -> c) -> (DTime, b) -> c -> IOSource a b -> IOProcessor a c
+nStepsMemory n f initA initB p = (scanlT clock f' (take n . repeat $ initA, initB) p) >>> arr snd
     where f' _ y2 dt (lastNSamps, _) = (nextSamps, f nextSamps )
               where nextSamps = (dt, y2) : (tail lastNSamps)
 
@@ -70,13 +71,13 @@ averageV weights samps = ((1/n) *^) . foldr (^+^) zeroV $ zipWith (*^) weights s
           
   
 -- todo: this is a general function, perhaps move to Processor package?
-movingCvRectAverage :: (Fractional (Scalar v), VectorSpace v) => [Scalar v] -> IOProcessor a [v] -> IOProcessor a v
-movingCvRectAverage weights pIn = movingAverage (length weights) (averageV weights . map snd) (0, zeroV) zeroV pIn'
+movingAverage :: (Fractional (Scalar v), VectorSpace v) => [Scalar v] -> IOProcessor a [v] -> IOProcessor a v
+movingAverage weights pIn = nStepsMemory (length weights) (averageV weights . map snd) (0, zeroV) zeroV pIn'
     where pIn' = pIn >>> arr headOrZero
-          headOrZero [] = zeroV
+          headOrZero [] = zeroV -- todo: headOrZero should pick the element closest to the latest average?
           headOrZero xs = head xs
 
 main :: IO ()
-main = Processor.runUntil (captureDev >>> resizer >>> avgRect faceDetect >>> arr drawCvRect >>> sdlWindow) () (const . return $ False)
-    where avgRect = movingCvRectAverage [2,1,1,0]
+main = Processor.runUntil (captureDev >>> resizer >>> averageFace >>> arr drawCvRect >>> sdlWindow) () (const . return $ False)
+    where averageFace = movingAverage [2,1,1,0] faceDetect
           sdlWindow = GP.sdlWindow resX resY  
