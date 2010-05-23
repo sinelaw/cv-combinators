@@ -11,7 +11,7 @@ import qualified Graphics.GraphicsProcessors as GP
 
 import qualified AI.CV.OpenCV.CV as CV
 import qualified Control.Processor as Processor
-import Control.Processor(scanlT, IOSource, IOProcessor, fir, trace, headOrLast)
+import Control.Processor(scanlT, IOSource, IOProcessor, fir, trace, holdMaybe, revertAfterT)
 import AI.CV.OpenCV.CxCore(CvRect(..), CvSize(..))
 
 import Data.VectorSpace((*^), zeroV, (^+^), Scalar, VectorSpace)
@@ -20,6 +20,7 @@ import Prelude hiding ((.),id)
 import Control.Arrow
 import Control.Category
 import Data.Monoid
+import Data.Maybe(listToMaybe)
 
 resX, resY :: Num a => a
 resX = 160
@@ -62,7 +63,8 @@ clock = return 1 -- todo implement really in some module that wraps SDL, GLUT or
 main :: IO ()
 --main = Processor.runUntil (captureDev >>> resizer >>> averageFace >>> arr drawCvRect >>> sdlWindow) () (const . return $ False)
 main = IP.runTillKeyPressed (captureDev >>> resizer >>> (id &&& averageFace) >>> (second (arr return)) >>> IP.drawRects >>> IP.window 0)
-    where averageFace = fir [0.25,0.25,0.25,0.25] 1 clock (headOrLast zeroV clock faceDetect >>> trace)
+    where averageFace = lastFace --fir [0.9,0.1] 1 clock lastFace
+          lastFace = revertAfterT 5 zeroV . holdMaybe zeroV clock $ (faceDetect >>> arr listToMaybe)
           --sdlWindow = GP.sdlWindow resX resY  
           headOrZero [] = zeroV
           headOrZero (v:vs) = v
