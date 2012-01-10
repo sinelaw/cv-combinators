@@ -7,14 +7,12 @@ import qualified AI.CV.ImageProcessors as IP
 
 import qualified Graphics.DrawingCombinators as Draw
 import Graphics.DrawingCombinators((%%))
-import qualified Graphics.GraphicsProcessors as GP
 
 import qualified AI.CV.OpenCV.CV as CV
-import qualified Control.Processor as Processor
-import Control.Processor(scanlT, IOSource, IOProcessor, fir, trace, holdMaybe, revertAfterT)
+import Control.Processor(IOProcessor, holdMaybe, revertAfterT)
 import AI.CV.OpenCV.CxCore(CvRect(..), CvSize(..))
 
-import Data.VectorSpace((*^), zeroV, (^+^), Scalar, VectorSpace)
+import Data.VectorSpace (zeroV) -- ((*^), zeroV, (^+^), Scalar, VectorSpace)
 
 import Prelude hiding ((.),id)
 import Control.Arrow
@@ -65,6 +63,6 @@ main :: IO ()
 main = IP.runTillKeyPressed (captureDev >>> resizer >>> (id &&& averageFace) >>> (second (arr return)) >>> IP.drawRects >>> IP.window 0)
     where averageFace = lastFace --fir [0.9,0.1] 1 clock lastFace
           lastFace = revertAfterT 5 zeroV . holdMaybe zeroV clock $ (faceDetect >>> arr listToMaybe)
-          --sdlWindow = GP.sdlWindow resX resY  
-          headOrZero [] = zeroV
-          headOrZero (v:vs) = v
+          -- sdlWindow = GP.sdlWindow resX resY  
+          -- headOrZero [] = zeroV
+          -- headOrZero (v:vs) = v
