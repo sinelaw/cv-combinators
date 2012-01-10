@@ -51,8 +51,8 @@ import Control.Processor(runUntil, IOSink, IOSource, IOProcessor, processor)
 import AI.CV.OpenCV.Types(PImage)
 import qualified AI.CV.OpenCV.CV as CV
 import qualified AI.CV.OpenCV.CxCore as CxCore
+import AI.CV.OpenCV.CxCore(CvSize, CvRect, CvMemStorage)
 import qualified AI.CV.OpenCV.HighGui as HighGui
-import AI.CV.OpenCV.CxCore(IplImage, CvSize, CvRect, CvMemStorage)
 import AI.CV.OpenCV.CV(CvHaarClassifierCascade)
 
 import Foreign.Ptr(Ptr)

@@ -34,7 +34,7 @@ sdlWindow width height = processor procFunc allocFunc return return
             -- TODO: doh, this is global state! the processor should handle individual windows.
             SDL.init [SDL.InitTimer, SDL.InitVideo]
             -- resolution & color depth
-            SDL.setVideoMode width height 32 [SDL.OpenGL]
+            _ <- SDL.setVideoMode width height 32 [SDL.OpenGL]
             Draw.clearRender firstImage 
             SDL.glSwapBuffers
             return ()
