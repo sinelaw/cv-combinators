@@ -83,7 +83,7 @@ runTillKeyPressed f = f `runTill` keyPressed >> (return ())
 
 ------------------------------------------------------------------
 capture :: IO HighGui.Capture -> ImageSource
-capture getCap = processor processQueryFrame allocateCamera fromState releaseNext
+capture getCap = processor processQueryFrame allocateCamera fromState (const $ return ())
     where processQueryFrame :: () -> (Image, HighGui.Capture) 
                                -> IO (Image, HighGui.Capture)
           processQueryFrame _ (_, cap) = do
@@ -97,8 +97,6 @@ capture getCap = processor processQueryFrame allocateCamera fromState releaseNex
             return (newFrame, cap)
           
           fromState (image, _) = return image
-          
-          releaseNext (_, cap) = HighGui.releaseCapture cap
 
 
 -- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
