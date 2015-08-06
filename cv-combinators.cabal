@@ -1,6 +1,7 @@
 name: cv-combinators
 version: 0.1.2.3
-license: BSD3
+license: GPL-2
+license-file: LICENSE
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
 category: AI, Graphics
@@ -17,7 +18,7 @@ description:
    .
 
 build-type: Simple
-cabal-version:  >= 1.2
+cabal-version:  >= 1.6
 Tested-With:   GHC == 6.10.4
 
 flag Demos
@@ -27,17 +28,19 @@ flag Demos
 library
    exposed-modules: AI.CV.ImageProcessors
    hs-Source-Dirs: src
-   build-depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor >= 0.0.2, vector-space
+   build-depends: base >=4 && <5, HOpenCV >= 0.3, allocated-processor >= 0.0.2, vector-space
    ghc-options: -Wall
+   Ghc-Prof-Options: -Wall
+
 
 executable test-cv-combinators
   if flag(Demos)
       Buildable: True
   hs-source-dirs:  src
-  Build-Depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor  >= 0.0.2, vector-space
+  Build-Depends: base >=4 && <5, HOpenCV >= 0.3, allocated-processor  >= 0.0.2, vector-space
   main-is: Test.hs
-  Ghc-Options: -Wall
-  Ghc-Prof-Options:  -prof -auto-all
+  ghc-options: -Wall
+  Ghc-Prof-Options: -Wall
   other-modules: AI.CV.ImageProcessors
 
 -- executable test-cv-combinators2
@@ -50,7 +53,7 @@ executable test-cv-combinators
 --   Ghc-Prof-Options:  -prof -auto-all
 --   other-modules: AI.CV.ImageProcessors, Graphics.GraphicsProcessors
 
--- source-repository head
---  type: git
---  location: git://github.com/sinelaw/cv-combinators.git
+source-repository head
+ type: git
+ location: git://github.com/sinelaw/cv-combinators.git
 
