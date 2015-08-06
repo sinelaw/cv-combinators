@@ -211,7 +211,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             
 -- | OpenCV's cvRectangle, currently without width, color or line type control
 drawRects :: IOProcessor (Image, [CvRect]) Image
-drawRects = processor procFunc (CxCore.cloneImage . fst) return CxCore.releaseImage
+drawRects = processor procFunc (CxCore.cloneImage . fst) return (const $ return ())
     where procFunc (src,rects) dst = do
             CxCore.copy src dst
             mapM_ (CxCore.rectangle dst) rects
