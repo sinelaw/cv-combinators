@@ -129,7 +129,7 @@ namedWindow s a = processor procFunc allocFunc return return
 -- | A convenience function for constructing a common type of processors that work exclusively on images
 imageProcessor :: (Image -> Image -> IO Image) -> (Image -> IO Image) 
                -> ImageProcessor
-imageProcessor procFunc allocFunc = processor procFunc allocFunc return CxCore.releaseImage
+imageProcessor procFunc allocFunc = processor procFunc allocFunc return (const $ return ())
 
 -- | OpenCV's cvResize
 resize :: Int -- Width
