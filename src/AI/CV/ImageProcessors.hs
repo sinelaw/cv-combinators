@@ -159,7 +159,7 @@ canny :: Int  -- ^ Threshold 1
          -> Int  -- ^ Threshold 2
          -> Int  -- ^ Size
          -> ImageProcessor
-canny thres1 thres2 size = processor processCanny allocateCanny convertState releaseState
+canny thres1 thres2 size = processor processCanny allocateCanny convertState (const $ return ())
     where processCanny src (gray, dst) = do
             HighGui.convertImage src gray 0 
             CV.canny gray dst (fromIntegral thres1) (fromIntegral thres2) (fromIntegral size)
@@ -172,10 +172,6 @@ canny thres1 thres2 size = processor processCanny allocateCanny convertState rel
             return (gray, target)
             
           convertState = return . snd
-                            
-          releaseState (gray, target) = do
-            CxCore.releaseImage gray
-            CxCore.releaseImage target
 
 ------------------------------------------------------------------
 
