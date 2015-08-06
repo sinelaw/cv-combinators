@@ -28,7 +28,7 @@ resizer :: IP.ImageProcessor
 resizer = IP.resize resX resY CV.CV_INTER_LINEAR
 
 faceDetect :: IOProcessor IP.Image [CvRect]
-faceDetect = IP.haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_alt.xml" 1.1 3 CV.cvHaarFlagNone (CvSize 20 20)
+faceDetect = IP.haarDetect "/usr/share/opencv/haarcascades/haarcascade_frontalface_alt.xml" 1.1 3 CV.haarFlagNone (CvSize 20 20)
   
 captureDev :: IP.ImageSource
 --captureDev = videoFile "/tmp/video.flv" -- Many formats are supported, not just flv (FFMPEG-based, normally).
