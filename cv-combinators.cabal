@@ -27,14 +27,14 @@ flag Demos
 library
    exposed-modules: AI.CV.ImageProcessors
    hs-Source-Dirs: src
-   build-depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor >= 0.0.2, vector-space
+   build-depends: base >=4 && <5, HOpenCV >= 0.3, allocated-processor >= 0.0.2, vector-space
    ghc-options: -Wall
 
 executable test-cv-combinators
   if flag(Demos)
       Buildable: True
   hs-source-dirs:  src
-  Build-Depends: base >=4 && <5, HOpenCV >= 0.1.2.1, allocated-processor  >= 0.0.2, vector-space
+  Build-Depends: base >=4 && <5, HOpenCV >= 0.3, allocated-processor  >= 0.0.2, vector-space
   main-is: Test.hs
   Ghc-Options: -Wall
   Ghc-Prof-Options:  -prof -auto-all
