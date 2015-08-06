@@ -182,7 +182,7 @@ haarDetect :: String  -- ^ Cascade filename (OpenCV comes with several, includin
            -> CV.HaarDetectFlag -- ^ flags
            -> CvSize  -- ^ min size
            -> IOProcessor Image [CvRect]
-haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc 
+haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc (const $ return ())
     where procFunc :: Image -> ([CvRect], (HaarClassifierCascade, MemStorage)) 
                    -> IO ([CvRect], (HaarClassifierCascade, MemStorage))
           procFunc image (_, x@(cascade, storage)) = do
@@ -198,10 +198,6 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             return ([], (cascade, storage))
           
           convFunc = return . fst
-          
-          freeFunc (_, (_, storage)) = do
-            CxCore.releaseMemStorage storage
-            -- todo release the cascade usign cvReleaseHaarClassifierCascade
           
             
 -----------------------------------------------------------------------------                             
