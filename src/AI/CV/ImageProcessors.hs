@@ -97,8 +97,8 @@ capture getCap = processor processQueryFrame allocateCamera fromState releaseNex
             return (newFrame, cap)
           
           fromState (image, _) = return image
-          
-          releaseNext (_, cap) = HighGui.releaseCapture cap
+
+          releaseNext (_, cap) = return ()
 
 
 -- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
@@ -131,7 +131,7 @@ namedWindow s a = processor procFunc allocFunc return return
 -- | A convenience function for constructing a common type of processors that work exclusively on images
 imageProcessor :: (Image -> Image -> IO Image) -> (Image -> IO Image) 
                -> ImageProcessor
-imageProcessor procFunc allocFunc = processor procFunc allocFunc return CxCore.releaseImage
+imageProcessor procFunc allocFunc = processor procFunc allocFunc return (const $ return ())
 
 -- | OpenCV's cvResize
 resize :: Int -- Width
@@ -174,10 +174,8 @@ canny thres1 thres2 size = processor processCanny allocateCanny convertState rel
             return (gray, target)
             
           convertState = return . snd
-                            
-          releaseState (gray, target) = do
-            CxCore.releaseImage gray
-            CxCore.releaseImage target
+
+          releaseState (gray, target) = return ()
 
 ------------------------------------------------------------------
 
@@ -204,9 +202,8 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             return ([], (cascade, storage))
           
           convFunc = return . fst
-          
-          freeFunc (_, (_, storage)) = do
-            CxCore.releaseMemStorage storage
+
+          freeFunc (_, (_, storage)) = return ()
             -- todo release the cascade usign cvReleaseHaarClassifierCascade
           
             
@@ -217,7 +214,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             
 -- | OpenCV's cvRectangle, currently without width, color or line type control
 drawRects :: IOProcessor (Image, [CvRect]) Image
-drawRects = processor procFunc (CxCore.cloneImage . fst) return CxCore.releaseImage
+drawRects = processor procFunc (CxCore.cloneImage . fst) return (const $ return ())
     where procFunc (src,rects) dst = do
             CxCore.copy src dst
             mapM_ (CxCore.rectangle dst) rects
