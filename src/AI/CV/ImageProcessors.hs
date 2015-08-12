@@ -83,8 +83,8 @@ runTillKeyPressed f = f `runTill` keyPressed >> (return ())
 
 ------------------------------------------------------------------
 capture :: IO HighGui.Capture -> ImageSource
-capture getCap = processor processQueryFrame allocateCamera fromState releaseNext
-    where processQueryFrame :: () -> (Image, HighGui.Capture)
+capture getCap = processor processQueryFrame allocateCamera fromState (const $ return ())
+    where processQueryFrame :: () -> (Image, HighGui.Capture) 
                                -> IO (Image, HighGui.Capture)
           processQueryFrame _ (_, cap) = do
             newFrame <- HighGui.queryFrame cap
@@ -97,9 +97,6 @@ capture getCap = processor processQueryFrame allocateCamera fromState releaseNex
             return (newFrame, cap)
 
           fromState (image, _) = return image
-
-          releaseNext (_, cap) = return ()
-
 
 -- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
 -- should work with most webcames. See OpenCV's docs for information.
@@ -154,14 +151,13 @@ dilate iterations = imageProcessor procDilate CxCore.cloneImage
             CV.dilate src dst (fromIntegral iterations)
             return dst
 
-
 -- todo: Int is not really correct here, because it's really CInt. should we just expose CInt?
 -- | OpenCV's cvCanny
 canny :: Int  -- ^ Threshold 1
          -> Int  -- ^ Threshold 2
          -> Int  -- ^ Size
          -> ImageProcessor
-canny thres1 thres2 size = processor processCanny allocateCanny convertState releaseState
+canny thres1 thres2 size = processor processCanny allocateCanny convertState (const $ return ())
     where processCanny src (gray, dst) = do
             HighGui.convertImage src gray 0
             CV.canny gray dst (fromIntegral thres1) (fromIntegral thres2) (fromIntegral size)
@@ -175,8 +171,6 @@ canny thres1 thres2 size = processor processCanny allocateCanny convertState rel
 
           convertState = return . snd
 
-          releaseState (gray, target) = return ()
-
 ------------------------------------------------------------------
 
 -- | Wrapper for OpenCV's cvHaarDetectObjects and the surrounding required things (mem storage, cascade loading, etc).
@@ -186,7 +180,7 @@ haarDetect :: String  -- ^ Cascade filename (OpenCV comes with several, includin
            -> CV.HaarDetectFlag -- ^ flags
            -> CvSize  -- ^ min size
            -> IOProcessor Image [CvRect]
-haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc freeFunc
+haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc (const $ return ())
     where procFunc :: Image -> ([CvRect], (HaarClassifierCascade, MemStorage))
                    -> IO ([CvRect], (HaarClassifierCascade, MemStorage))
           procFunc image (_, x@(cascade, storage)) = do
@@ -202,10 +196,6 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
             return ([], (cascade, storage))
 
           convFunc = return . fst
-
-          freeFunc (_, (_, storage)) = return ()
-            -- todo release the cascade usign cvReleaseHaarClassifierCascade
-
 
 -----------------------------------------------------------------------------
 
