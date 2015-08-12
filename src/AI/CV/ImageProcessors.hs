@@ -98,7 +98,7 @@ capture getCap = processor processQueryFrame allocateCamera fromState releaseNex
 
           fromState (image, _) = return image
 
-          releaseNext (_, cap) = return ()
+          releaseNext _ = return ()
 
 
 -- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
@@ -175,7 +175,7 @@ canny thres1 thres2 size = processor processCanny allocateCanny convertState rel
 
           convertState = return . snd
 
-          releaseState (gray, target) = return ()
+          releaseState _ = return ()
 
 ------------------------------------------------------------------
 
@@ -203,7 +203,7 @@ haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor pr
 
           convFunc = return . fst
 
-          freeFunc (_, (_, storage)) = return ()
+          freeFunc _ = return ()
             -- todo release the cascade usign cvReleaseHaarClassifierCascade
 
 
