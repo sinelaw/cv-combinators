@@ -1,6 +1,6 @@
 
 --------------------------------------------------------------
--- | 
+-- |
 -- Module      : AI.CV.ImageProcessors
 -- Copyright   : (c) Noam Lewis 2010
 -- License     : BSD3
@@ -20,16 +20,16 @@
 -- > cam = camera 0        -- Autodetect camera
 -- > edge = canny 30 190 3 -- Edge detecting processor using canny operator
 -- >
--- > test = cam >>> edge >>> win   
+-- > test = cam >>> edge >>> win
 --
 -- The last expression is a processor that captures frames from camera and displays edge-detected version in the window.
 --------------------------------------------------------------
-module AI.CV.ImageProcessors 
-    (ImageSink, 
-     ImageSource, 
-     ImageProcessor, 
-     Image, 
-     
+module AI.CV.ImageProcessors
+    (ImageSink,
+     ImageSource,
+     ImageProcessor,
+     Image,
+
      camera,
      videoFile,
 
@@ -89,15 +89,14 @@ capture getCap = processor processQueryFrame allocateCamera fromState (const $ r
           processQueryFrame _ (_, cap) = do
             newFrame <- HighGui.queryFrame cap
             return (newFrame, cap)
-          
+
           allocateCamera :: () -> IO (Image, HighGui.Capture)
           allocateCamera _ = do
             cap <- getCap
             newFrame <- HighGui.queryFrame cap
             return (newFrame, cap)
-          
-          fromState (image, _) = return image
 
+          fromState (image, _) = return image
 
 -- | A capture device, using OpenCV's HighGui lib's cvCreateCameraCapture
 -- should work with most webcames. See OpenCV's docs for information.
@@ -109,8 +108,8 @@ videoFile :: String -> ImageSource
 videoFile fileName = capture (HighGui.createFileCapture fileName)
 
 ------------------------------------------------------------------
--- GUI stuff  
-            
+-- GUI stuff
+
 -- | A window that displays images.
 -- Note: windows with the same index will be the same window....is this ok?
 -- Response: Yes. It will display whatever images you give it.
@@ -121,13 +120,13 @@ namedWindow :: String -> Bool -> ImageSink
 namedWindow s a = processor procFunc allocFunc return return
     where procFunc :: (Image -> () -> IO ())
           procFunc src x = HighGui.showImage s src >> return x
-          
+
           allocFunc :: (Image -> IO ())
           allocFunc _ = HighGui.namedWindow s a
 
 ------------------------------------------------------------------
 -- | A convenience function for constructing a common type of processors that work exclusively on images
-imageProcessor :: (Image -> Image -> IO Image) -> (Image -> IO Image) 
+imageProcessor :: (Image -> Image -> IO Image) -> (Image -> IO Image)
                -> ImageProcessor
 imageProcessor procFunc allocFunc = processor procFunc allocFunc return (const $ return ())
 
@@ -139,72 +138,70 @@ resize width height interp = imageProcessor processResize allocateResize
     where processResize src dst = do
             CV.resize src dst interp
             return dst
-            
+
           allocateResize src = do
             nChans <- CxCore.getNumChannels src :: IO Int
             depth <- CxCore.getDepth src
             CxCore.createImage (CxCore.CvSize (fromIntegral width) (fromIntegral height)) depth (fromIntegral nChans)
-          
+
 -- | OpenCV's cvDilate
 dilate :: Int -> ImageProcessor
 dilate iterations = imageProcessor procDilate CxCore.cloneImage
     where procDilate src dst = do
-            CV.dilate src dst (fromIntegral iterations) 
+            CV.dilate src dst (fromIntegral iterations)
             return dst
 
-
 -- todo: Int is not really correct here, because it's really CInt. should we just expose CInt?
--- | OpenCV's cvCanny            
+-- | OpenCV's cvCanny
 canny :: Int  -- ^ Threshold 1
          -> Int  -- ^ Threshold 2
          -> Int  -- ^ Size
          -> ImageProcessor
 canny thres1 thres2 size = processor processCanny allocateCanny convertState (const $ return ())
     where processCanny src (gray, dst) = do
-            HighGui.convertImage src gray 0 
+            HighGui.convertImage src gray 0
             CV.canny gray dst (fromIntegral thres1) (fromIntegral thres2) (fromIntegral size)
             return (gray, dst)
-            
+
           allocateCanny src = do
             srcSize <- CxCore.getSize src
             target <- CxCore.createImage srcSize CxCore.iplDepth8u 1
             gray <- CxCore.createImage srcSize CxCore.iplDepth8u 1
             return (gray, target)
-            
+
           convertState = return . snd
 
 ------------------------------------------------------------------
 
 -- | Wrapper for OpenCV's cvHaarDetectObjects and the surrounding required things (mem storage, cascade loading, etc).
 haarDetect :: String  -- ^ Cascade filename (OpenCV comes with several, including ones for face detection)
-           -> Double  -- ^ scale factor 
+           -> Double  -- ^ scale factor
            -> Int     -- ^ min neighbors
            -> CV.HaarDetectFlag -- ^ flags
            -> CvSize  -- ^ min size
            -> IOProcessor Image [CvRect]
 haarDetect cascadeFileName scaleFactor minNeighbors flags minSize = processor procFunc allocFunc convFunc (const $ return ())
-    where procFunc :: Image -> ([CvRect], (HaarClassifierCascade, MemStorage)) 
+    where procFunc :: Image -> ([CvRect], (HaarClassifierCascade, MemStorage))
                    -> IO ([CvRect], (HaarClassifierCascade, MemStorage))
           procFunc image (_, x@(cascade, storage)) = do
             seqP <- CV.haarDetectObjects image cascade storage (realToFrac scaleFactor) (fromIntegral minNeighbors) flags minSize
             recs <- CxCore.seqToList seqP
             return (recs, x)
-            
+
           allocFunc :: Image -> IO ([CvRect], (HaarClassifierCascade, MemStorage))
           allocFunc _ = do
             storage <- CxCore.createMemStorage 0
             (cascade, name) <- CxCore.load cascadeFileName storage Nothing
             print name -- todo verify that this is a haar cascade
             return ([], (cascade, storage))
-          
+
           convFunc = return . fst
-          
-            
------------------------------------------------------------------------------                             
+
+-----------------------------------------------------------------------------
 
 -- Add a processor that takes a list of any shape (rect, ellipse, etc.) and draws them all on the image?
 -- need a datatype that combines the shape types for that.
-            
+
 -- | OpenCV's cvRectangle, currently without width, color or line type control
 drawRects :: IOProcessor (Image, [CvRect]) Image
 drawRects = processor procFunc (CxCore.cloneImage . fst) return (const $ return ())
@@ -212,5 +209,5 @@ drawRects = processor procFunc (CxCore.cloneImage . fst) return (const $ return 
             CxCore.copy src dst
             mapM_ (CxCore.rectangle dst) rects
             return dst
-            
+
 
